@@ -1,0 +1,192 @@
+{
+  "common": {
+    "save": "儲存",
+    "cancel": "取消",
+    "settings": "設定",
+    "close": "關閉",
+    "accept": "接受",
+    "toggleColorMode": "切換色彩模式"
+  },
+  "settings": {
+    "tabs": {
+      "general": "一般",
+      "live2d": "Live2D",
+      "asr": "語音辨識",
+      "tts": "語音合成",
+      "agent": "代理",
+      "about": "關於"
+    },
+    "general": {
+      "language": "語言",
+      "useCameraBackground": "使用攝影機背景",
+      "showSubtitle": "顯示字幕",
+      "backgroundImage": "背景圖片",
+      "customBgUrlPlaceholder": "輸入圖片網址",
+      "customBgUrl": "或輸入自訂背景網址",
+      "characterPreset": "角色預設",
+      "wsUrl": "WebSocket 網址",
+      "baseUrl": "基礎網址",
+      "wsUrlPlaceholder": "輸入 WebSocket 網址",
+      "baseUrlPlaceholder": "輸入基礎網址",
+      "languages": {
+        "english": "英文",
+        "traditionalChinese": "繁體中文"
+      },
+      "imageCompressionQuality": "圖片壓縮品質",
+      "imageCompressionQualityPlaceholder": "輸入壓縮品質（0-100）",
+      "imageCompressionQualityHelp": "JPEG 壓縮品質（0.1-1.0）。預設為 0.8，以減少檔案大小；圖片傳送至 AI 模型時不會額外壓縮，可能造成檔案過大。",
+      "imageMaxWidth": "圖片最大寬度",
+      "imageMaxWidthPlaceholder": "輸入最大寬度（像素）",
+      "imageMaxWidthHelp": "圖片縮放的最大寬度。超過此寬度的圖片會依比例縮小。設為 0 表示不限制大小。部分 AI 模型處理過大圖片時可能有限制；但多數模型可自動處理，因此預設為 0，以保留原始圖片。"
+    },
+    "live2d": {
+      "pointerInteractive": "滑鼠互動",
+      "scrollToResize": "啟用捲動縮放"
+    },
+    "asr": {
+      "autoStopMic": "AI 開始說話時自動關閉麥克風",
+      "autoStopMicDesc": "AI 開始說話時自動關閉麥克風，以避免聲音回授",
+      "autoStartMicOnConvEnd": "對話結束時自動開啟麥克風",
+      "autoStartMicOnConvEndDesc": "AI 說話結束時自動重新開啟麥克風，讓對話更順暢",
+      "autoStartMicOn": "AI 被中斷時自動開啟麥克風",
+      "autoStartMicOnDesc": "中斷 AI 時自動重新開啟麥克風，以持續互動",
+      "positiveSpeechThreshold": "語音辨識閾值",
+      "positiveSpeechThresholdDesc": "偵測語音所需的最低信心值（1-100）。數值越高，越能減少誤判",
+      "negativeSpeechThreshold": "負向語音閾值",
+      "negativeSpeechThresholdDesc": "停止偵測語音的信心值下限（0-100）。數值越低，偵測越不敏感",
+      "redemptionFrames": "確認影格數",
+      "redemptionFramesDesc": "確認偵測到語音所需的連續影格數（1-100）。數值越高，越能減少雜訊觸發"
+    },
+    "agent": {
+      "allowProactiveSpeak": "允許 AI 主動發言",
+      "idleSecondsToSpeak": "閒置多少秒後允許 AI 發言",
+      "allowButtonTrigger": "透過舉手按鈕提示 AI 發言",
+      "maxResponseCharacters": "最大回覆字元數"
+    },
+    "about": {
+      "title": "Open LLM VTuber 前端",
+      "version": "版本",
+      "projectLinks": "專案連結",
+      "github": "GitHub",
+      "documentation": "文件",
+      "license": "授權條款",
+      "copyright": "版權",
+      "viewLicense": "檢視授權條款"
+    }
+  },
+  "footer": {
+    "typeYourMessage": "輸入您的訊息...",
+    "cameraControl": "點擊啟動攝影機",
+    "cameraStopping": "點擊停止攝影機",
+    "screenControl": "點擊開始螢幕擷取",
+    "screenStopping": "點擊停止螢幕擷取",
+    "raiseHand": "舉手",
+    "attachFile": "附加檔案"
+  },
+  "sidebar": {
+    "camera": "攝影機",
+    "screen": "螢幕",
+    "browser": "瀏覽器",
+    "live": "直播",
+    "visionReady": "本機辨識已啟動",
+    "poseTracking": "本機姿態追蹤中",
+    "visionEvents": {
+      "wave": "挥手",
+      "thumbs_up": "讚",
+      "smile": "微笑",
+      "mouth_open": "張嘴",
+      "hug": "擁抱",
+      "heart": "手勢愛心"
+    },
+    "visionSubmission": {
+      "sending": "正在傳送辨識事件...",
+      "retrying": "正在重試傳送辨識事件...",
+      "failed": "無法傳送辨識事件"
+    },
+    "noMessages": "尚無訊息，開始對話吧！",
+    "noBrowserSession": "沒有進行中的瀏覽器工作階段",
+    "browserSession": "瀏覽器工作階段",
+    "modeMenu": "模式選單",
+    "changeMode": "變更模式",
+    "liveMode": "直播模式",
+    "petMode": "桌寵模式",
+    "petModeDesktopOnly": "桌寵模式僅適用於桌面應用程式"
+  },
+  "group": {
+    "management": "群組管理",
+    "yourUuid": "您的 UUID",
+    "inviteMember": "邀請成員",
+    "enterMemberUuid": "輸入成員 UUID",
+    "invite": "邀請",
+    "members": "成員",
+    "you": "您",
+    "leaveGroup": "離開群組",
+    "removeMember": "移除成員",
+    "leave": "離開"
+  },
+  "history": {
+    "chatHistoryList": "聊天紀錄列表",
+    "noMessages": "尚無訊息",
+    "me": "我",
+    "ai": "AI",
+    "toolRunning": "{{name}} 正在使用工具 {{tool}}",
+    "toolCompleted": "{{name}} 已使用工具 {{tool}}"
+  },
+  "notification": {
+    "characterLoaded": "已載入新角色",
+    "characterSwitched": "已切換角色",
+    "historyLoaded": "已載入聊天紀錄",
+    "newConversation": "已開始新對話",
+    "newChatHistory": "已建立新聊天紀錄",
+    "historyDeleteSuccess": "已刪除聊天紀錄",
+    "historyDeleteFail": "刪除聊天紀錄失敗"
+  },
+  "error": {
+    "cameraApiNotSupported": "此裝置不支援攝影機 API",
+    "noCameraFound": "此裝置找不到攝影機",
+    "failedStartCamera": "無法啟動攝影機",
+    "failedStartBackgroundCamera": "無法啟動背景攝影機",
+    "failedStartScreenCapture": "無法啟動螢幕擷取",
+    "failedStartVAD": "無法啟動語音活動偵測",
+    "llmCantHear": "AI 聽不到你的聲音。",
+    "audioPlayback": "音訊播放錯誤",
+    "enterValidUuid": "請輸入有效的 UUID",
+    "cannotDeleteCurrentHistory": "無法刪除目前的聊天紀錄",
+    "failedCapture": "無法擷取 {{source}} 畫面",
+    "failedParseWebSocket": "無法解析 WebSocket 訊息",
+    "websocketNotOpen": "WebSocket 尚未開啟。",
+    "vadMisfire": "偵測到語音，但時間過短。請嘗試提高音量或說久一點，或調整設定（降低語音辨識閾值、降低負向語音閾值、減少確認影格數）。",
+    "failedLoadRequiredComponents": "無法載入必要元件，請查看主控台以取得詳細資訊。"
+  },
+  "aiState": {
+    "idle": "閒置",
+    "thinking-speaking": "思考／說話中",
+    "interrupted": "已中斷",
+    "loading": "載入中",
+    "listening": "聆聽中",
+    "waiting": "等待中"
+  },
+  "wsStatus": {
+    "connected": "已連線",
+    "connecting": "連線中",
+    "clickToReconnect": "點擊重新連線"
+  },
+  "mode": {
+    "petModeUnavailable": "無法使用桌寵模式",
+    "petModeDesktopOnly": "桌寵模式僅適用於桌面應用程式"
+  },
+  "inputSubtitle": {
+    "close": "關閉字幕",
+    "toggleMicrophone": "切換麥克風",
+    "interrupt": "中斷"
+  },
+  "titleBar": {
+    "exitFullScreen": "離開全螢幕",
+    "restore": "還原",
+    "maximize": "最大化",
+    "minimize": "最小化"
+  },
+  "subtitle": {
+    "default": "嗨，我是隨機的 AI VTuber。你是誰呀？啊，你一定很驚訝我這麼厲害，對吧？"
+  }
+}
