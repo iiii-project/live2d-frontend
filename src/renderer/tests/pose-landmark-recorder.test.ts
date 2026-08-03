@@ -74,7 +74,10 @@ async function createRunningRecorder(options?: PoseLandmarkRecorderOptions) {
 }
 
 beforeEach(() => {
-  vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+  vi.stubGlobal(
+    'requestAnimationFrame',
+    vi.fn(() => 1),
+  );
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
   FakePose.createFromOptions.mockClear();
   FakeFace.createFromOptions.mockClear();
@@ -166,7 +169,10 @@ describe('PoseLandmarkRecorder', () => {
     expect(frame?.hands.detected).toBe(true);
     expect(frame?.hands.landmarks[0].length).toBe(2);
     expect(frame?.hands.landmarks[0][0].visibility).toBeNull();
-    expect(frame?.hands.handedness[0]).toEqual({ handedness: 'Left', score: 0.95 });
+    expect(frame?.hands.handedness[0]).toEqual({
+      handedness: 'Left',
+      score: 0.95,
+    });
 
     expect(frames).toHaveLength(1);
     expect(recorder.emittedFrameCount).toBe(1);
@@ -178,6 +184,22 @@ describe('PoseLandmarkRecorder', () => {
 
     expect(recorder.processFrame(1_000)).toBeNull();
     recorder.stop();
+  });
+
+  it('reports integer relative time in milliseconds even from fractional timers', async () => {
+    const recorder = await createRunningRecorder();
+    const frames: PoseObservationFrame[] = [];
+    recorder.subscribe((frame) => frames.push(frame));
+
+    recorder.processFrame(1_000.567);
+    recorder.processFrame(1_050.123);
+    recorder.stop();
+
+    for (const frame of frames) {
+      expect(Number.isInteger(frame.relativeTimeMs)).toBe(true);
+      expect(frame.relativeTimeMs).toBeGreaterThanOrEqual(0);
+    }
+    expect(frames[1].relativeTimeMs).toBeGreaterThan(frames[0].relativeTimeMs);
   });
 
   it('sends no frames and no raw image over the network', async () => {

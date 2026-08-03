@@ -5,10 +5,14 @@ import {
   PoseLandmarker,
 } from '@mediapipe/tasks-vision';
 
-const WASM_ROOT = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.0/wasm';
-const POSE_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task';
-const FACE_MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task';
-const HAND_MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task';
+const WASM_ROOT =
+  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.0/wasm';
+const POSE_MODEL =
+  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task';
+const FACE_MODEL =
+  'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task';
+const HAND_MODEL =
+  'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task';
 
 const DEFAULT_VISIBILITY_THRESHOLD = 0.5;
 const HAVE_CURRENT_DATA = 4;
@@ -81,7 +85,12 @@ export interface PoseLandmarkRecorderOptions {
 
 export type PoseObservationSubscriber = (frame: PoseObservationFrame) => void;
 
-function toLandmarkPoint(landmark: { x: number; y: number; z: number; visibility?: number }, index: number, kind: LandmarkKind, threshold: number): LandmarkPoint {
+function toLandmarkPoint(
+  landmark: { x: number; y: number; z: number; visibility?: number },
+  index: number,
+  kind: LandmarkKind,
+  threshold: number,
+): LandmarkPoint {
   if (kind === 'pose' && Number.isFinite(landmark.visibility)) {
     const visibility = landmark.visibility ?? 0;
     return {
@@ -134,7 +143,8 @@ export class PoseLandmarkRecorder {
     this.numPoses = options.numPoses ?? 1;
     this.numFaces = options.numFaces ?? 1;
     this.numHands = options.numHands ?? 2;
-    this.visibilityThreshold = options.visibilityThreshold ?? DEFAULT_VISIBILITY_THRESHOLD;
+    this.visibilityThreshold =
+      options.visibilityThreshold ?? DEFAULT_VISIBILITY_THRESHOLD;
     this.enabled = {
       pose: options.enabled?.pose ?? true,
       face: options.enabled?.face ?? true,
@@ -164,26 +174,38 @@ export class PoseLandmarkRecorder {
       const creators: Array<Promise<void>> = [];
 
       if (this.enabled.pose) {
-        creators.push(PoseLandmarker.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: this.poseModel },
-          runningMode: 'VIDEO',
-          numPoses: this.numPoses,
-        }).then((landmarker) => { this.poseLandmarker = landmarker; }));
+        creators.push(
+          PoseLandmarker.createFromOptions(vision, {
+            baseOptions: { modelAssetPath: this.poseModel },
+            runningMode: 'VIDEO',
+            numPoses: this.numPoses,
+          }).then((landmarker) => {
+            this.poseLandmarker = landmarker;
+          }),
+        );
       }
       if (this.enabled.face) {
-        creators.push(FaceLandmarker.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: this.faceModel },
-          runningMode: 'VIDEO',
-          numFaces: this.numFaces,
-          outputFaceBlendshapes: false,
-        }).then((landmarker) => { this.faceLandmarker = landmarker; }));
+        creators.push(
+          FaceLandmarker.createFromOptions(vision, {
+            baseOptions: { modelAssetPath: this.faceModel },
+            runningMode: 'VIDEO',
+            numFaces: this.numFaces,
+            outputFaceBlendshapes: false,
+          }).then((landmarker) => {
+            this.faceLandmarker = landmarker;
+          }),
+        );
       }
       if (this.enabled.hand) {
-        creators.push(HandLandmarker.createFromOptions(vision, {
-          baseOptions: { modelAssetPath: this.handModel },
-          runningMode: 'VIDEO',
-          numHands: this.numHands,
-        }).then((landmarker) => { this.handLandmarker = landmarker; }));
+        creators.push(
+          HandLandmarker.createFromOptions(vision, {
+            baseOptions: { modelAssetPath: this.handModel },
+            runningMode: 'VIDEO',
+            numHands: this.numHands,
+          }).then((landmarker) => {
+            this.handLandmarker = landmarker;
+          }),
+        );
       }
 
       await Promise.all(creators);
@@ -214,7 +236,8 @@ export class PoseLandmarkRecorder {
     const video = this.video;
     if (video.readyState < HAVE_CURRENT_DATA) return null;
 
-    const timestamp = now > this.lastMediaTimestamp ? now : this.lastMediaTimestamp + 1;
+    const timestamp =
+      now > this.lastMediaTimestamp ? now : this.lastMediaTimestamp + 1;
     this.lastMediaTimestamp = timestamp;
 
     const poseResult = this.poseLandmarker?.detectForVideo(video, timestamp);
@@ -223,33 +246,39 @@ export class PoseLandmarkRecorder {
 
     const frame: PoseObservationFrame = {
       version: 1,
-      relativeTimeMs: timestamp - this.sessionStartedAt,
+      relativeTimeMs: Math.round(timestamp - this.sessionStartedAt),
       mediaTimestampMs: timestamp,
       coordinateSystem: COORDINATE_SYSTEM,
       body: {
         detected: Boolean(poseResult?.landmarks.length),
-        landmarks: poseResult?.landmarks[0]?.map((point, index) => (
-          toLandmarkPoint(point, index, 'pose', this.visibilityThreshold)
-        )) ?? [],
+        landmarks:
+          poseResult?.landmarks[0]?.map((point, index) =>
+            toLandmarkPoint(point, index, 'pose', this.visibilityThreshold),
+          ) ?? [],
       },
       face: {
         detected: Boolean(faceResult?.faceLandmarks.length),
-        landmarks: faceResult?.faceLandmarks[0]?.map((point, index) => (
-          toLandmarkPoint(point, index, 'face', this.visibilityThreshold)
-        )) ?? [],
+        landmarks:
+          faceResult?.faceLandmarks[0]?.map((point, index) =>
+            toLandmarkPoint(point, index, 'face', this.visibilityThreshold),
+          ) ?? [],
       },
       hands: {
         detected: Boolean(handResult?.landmarks.length),
-        landmarks: handResult?.landmarks.map((hand) => (
-          hand.map((point, index) => toLandmarkPoint(point, index, 'hand', this.visibilityThreshold))
-        )) ?? [],
-        handedness: handResult?.handedness.map((categories) => {
-          const top = categories[0];
-          return {
-            handedness: top?.categoryName ?? 'unknown',
-            score: top?.score ?? 0,
-          };
-        }) ?? [],
+        landmarks:
+          handResult?.landmarks.map((hand) =>
+            hand.map((point, index) =>
+              toLandmarkPoint(point, index, 'hand', this.visibilityThreshold),
+            ),
+          ) ?? [],
+        handedness:
+          handResult?.handedness.map((categories) => {
+            const top = categories[0];
+            return {
+              handedness: top?.categoryName ?? 'unknown',
+              score: top?.score ?? 0,
+            };
+          }) ?? [],
       },
     };
 

@@ -103,6 +103,11 @@
       "retrying": "Retrying recognition event...",
       "failed": "Recognition event could not be sent"
     },
+    "poseObservationSubmission": {
+      "sending": "Sending pose observation...",
+      "retrying": "Retrying pose observation...",
+      "failed": "Pose observation could not be sent"
+    },
     "noMessages": "No messages yet. Start a conversation!",
     "noBrowserSession": "No active browser session",
     "browserSession": "Browser Session",

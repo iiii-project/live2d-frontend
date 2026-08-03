@@ -148,17 +148,17 @@ describe('PoseObservationBuffer window boundaries', () => {
   it('emits a summary only when the accumulated span reaches the window duration', () => {
     const buffer = new PoseObservationBuffer();
     let emitted = false;
-    for (let t = 0; t < 30_000; t += 50) {
+    for (let t = 0; t < 5_000; t += 50) {
       const summary = buffer.push(makeFrame(t));
       if (summary !== null) emitted = true;
     }
     expect(emitted).toBe(false);
-    expect(buffer.size).toBe(600);
+    expect(buffer.size).toBe(100);
 
-    const summary = buffer.push(makeFrame(30_000));
+    const summary = buffer.push(makeFrame(5_000));
     expect(summary).not.toBeNull();
-    expect(summary?.period.frameCount).toBe(601);
-    expect(summary?.period.durationMs).toBe(30_000);
+    expect(summary?.period.frameCount).toBe(101);
+    expect(summary?.period.durationMs).toBe(5_000);
     expect(buffer.size).toBe(0);
   });
 

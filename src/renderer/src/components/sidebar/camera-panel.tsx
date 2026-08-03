@@ -6,10 +6,12 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { sidebarStyles } from './sidebar-styles';
 import { useCameraPanel } from '@/hooks/sidebar/use-camera-panel';
 import { useLocalPoseLandmarker } from '@/hooks/vision/use-local-pose-landmarker';
+import { usePoseObservationSubmission } from '@/hooks/vision/use-pose-observation-submission';
 // ============================================================
-// [暫時停用-手勢辨識] 為了單獨測試本機姿態 landmark 擷取，
-// 暫時註解既有手勢辨識（wave/thumbs_up/smile/mouth_open/hug/heart）
-// 與其後端事件送出。測試完成後還原下面註解即可重新啟用。
+// [暫時停用-手勢辨識] 為了單獨測試本機姿態 landmark 擷取與
+// 5 秒姿態觀察送出，暫時註解既有手勢辨識
+// （wave/thumbs_up/smile/mouth_open/hug/heart）與其後端事件送出。
+// 測試完成後還原下面註解即可重新啟用。
 // ============================================================
 // import { useLocalVisionRecognition } from '@/hooks/vision/use-local-vision-recognition';
 // import { useVisionEventSubmission } from '@/hooks/vision/use-vision-event-submission';
@@ -20,7 +22,13 @@ function LiveIndicator() {
 
   return (
     <Box color="red.500" display="flex" alignItems="center" gap={2}>
-      <Box w="8px" h="8px" borderRadius="full" bg="red.500" animation="pulse 2s infinite" />
+      <Box
+        w="8px"
+        h="8px"
+        borderRadius="full"
+        bg="red.500"
+        animation="pulse 2s infinite"
+      />
       <Text fontSize="sm">{t('sidebar.live')}</Text>
     </Box>
   );
@@ -49,8 +57,8 @@ function VideoStream({
   videoRef,
   isStreaming,
 }: {
-  videoRef: React.RefObject<HTMLVideoElement>
-  isStreaming: boolean
+  videoRef: React.RefObject<HTMLVideoElement>;
+  isStreaming: boolean;
 }) {
   return (
     <video
@@ -81,6 +89,7 @@ function CameraPanel(): JSX.Element {
   // const { isRecognizing, lastEvent } = useLocalVisionRecognition(videoRef, isStreaming);
   const { isTracking } = useLocalPoseLandmarker(videoRef, isStreaming);
   // const { visionEventSubmissionStatus } = useVisionEventSubmission();
+  const { poseObservationSubmissionStatus } = usePoseObservationSubmission();
 
   useEffect(() => {
     if (videoRef.current) {
@@ -93,18 +102,49 @@ function CameraPanel(): JSX.Element {
       <Box {...sidebarStyles.cameraPanel.header}>
         {isStreaming && <LiveIndicator />}
         {/* [暫時停用-手勢辨識] 見上方 import 註解說明，測試完還原即可。 */}
-        {/* {isRecognizing && <Text fontSize="xs" color="green.300">{t('sidebar.visionReady')}</Text>} */}
-        {isTracking && <Text fontSize="xs" color="teal.300">{t('sidebar.poseTracking')}</Text>}
+        {/* {isRecognizing && (
+          <Text fontSize="xs" color="green.300">
+            {t('sidebar.visionReady')}
+          </Text>
+        )} */}
+        {isTracking && (
+          <Text fontSize="xs" color="teal.300">
+            {t('sidebar.poseTracking')}
+          </Text>
+        )}
         {/* {visionEventSubmissionStatus !== 'idle' && (
-          <Text fontSize="xs" color={visionEventSubmissionStatus === 'failed' ? 'red.300' : 'yellow.300'}>
+          <Text
+            fontSize="xs"
+            color={
+              visionEventSubmissionStatus === 'failed'
+                ? 'red.300'
+                : 'yellow.300'
+            }
+          >
             {t(`sidebar.visionSubmission.${visionEventSubmissionStatus}`)}
           </Text>
         )} */}
+        {poseObservationSubmissionStatus !== 'idle' && (
+          <Text
+            fontSize="xs"
+            color={
+              poseObservationSubmissionStatus === 'failed'
+                ? 'red.300'
+                : 'yellow.300'
+            }
+          >
+            {t(
+              `sidebar.poseObservationSubmission.${poseObservationSubmissionStatus}`,
+            )}
+          </Text>
+        )}
       </Box>
 
       <Tooltip
         showArrow
-        content={isStreaming ? t('footer.cameraStopping') : t('footer.cameraControl')}
+        content={
+          isStreaming ? t('footer.cameraStopping') : t('footer.cameraControl')
+        }
         open={isHovering && !error}
       >
         <Box
@@ -127,7 +167,17 @@ function CameraPanel(): JSX.Element {
               <VideoStream videoRef={videoRef} isStreaming={isStreaming} />
               {/* [暫時停用-手勢辨識] 見上方 import 註解說明，測試完還原即可。 */}
               {/* {lastEvent && (
-                <Text position="absolute" bottom={2} left={2} px={2} py={1} borderRadius="sm" bg="blackAlpha.700" color="white" fontSize="xs">
+                <Text
+                  position="absolute"
+                  bottom={2}
+                  left={2}
+                  px={2}
+                  py={1}
+                  borderRadius="sm"
+                  bg="blackAlpha.700"
+                  color="white"
+                  fontSize="xs"
+                >
                   {t(`sidebar.visionEvents.${lastEvent}`)}
                 </Text>
               )} */}

@@ -5,7 +5,7 @@ import type {
   PoseObservationFrame,
 } from './pose-landmark-recorder';
 
-export const OBSERVATION_WINDOW_MS = 30_000;
+export const OBSERVATION_WINDOW_MS = 5_000;
 export const DEFAULT_SAMPLE_INTERVAL_MS = 200;
 export const STATIONARY_SPEED_THRESHOLD = 0.02;
 export const STATIONARY_RADIUS = 0.02;

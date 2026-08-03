@@ -103,6 +103,11 @@
       "retrying": "正在重試傳送辨識事件...",
       "failed": "無法傳送辨識事件"
     },
+    "poseObservationSubmission": {
+      "sending": "正在傳送姿態觀察...",
+      "retrying": "正在重試傳送姿態觀察...",
+      "failed": "無法傳送姿態觀察"
+    },
     "noMessages": "尚無訊息，開始對話吧！",
     "noBrowserSession": "沒有進行中的瀏覽器工作階段",
     "browserSession": "瀏覽器工作階段",
