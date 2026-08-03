@@ -1,38 +1,38 @@
 module.exports = {
+  env: {
+    browser: true,
+    commonjs: true,
+    es2021: true,
+    node: true,
+  },
   parser: '@typescript-eslint/parser',
+  parserOptions: {
+    ecmaFeatures: {
+      jsx: true,
+    },
+    sourceType: 'module',
+    ecmaVersion: 2021,
+  },
   extends: [
-    'airbnb',
-    'airbnb/hooks',
-    'plugin:@typescript-eslint/recommended',
+    '@electron-toolkit/eslint-config-ts',
+    '@electron-toolkit/eslint-config-prettier',
     'plugin:react/recommended',
   ],
-  plugins: ['@typescript-eslint', 'react'],
+  plugins: ['react', '@typescript-eslint'],
   settings: {
-    'import/resolver': {
-      node: {
-        extensions: ['.js', '.jsx', '.ts', '.tsx'],
-      },
+    react: {
+      version: 'detect',
     },
   },
   rules: {
-    'no-unused-vars': 'off',
     'max-len': 'off',
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-unused-vars': 'off',
     'no-console': 'off',
     'react/jsx-filename-extension': [1, { extensions: ['.tsx', '.jsx'] }],
-    'import/extensions': 'off',
-    'import/no-extraneous-dependencies': ['error', { devDependencies: true }],
     'react/react-in-jsx-scope': 'off',
     'react/jsx-props-no-spreading': 'off',
-    'import/no-unresolved': 'off',
-    'import/prefer-default-export': 'off',
-    quotes: 'off',
-    'operator-linebreak': 'off',
     'react/display-name': 'off',
-    'react-hooks/exhaustive-deps': 'off',
-    'consistent-return': 'off',
-    'object-curly-newline': 'off',
     'react/require-default-props': 'off',
   },
 };
