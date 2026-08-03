@@ -2,11 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   submitPoseObservation,
   submitPoseObservationWithRetry,
+  type PoseObservationPayload,
 } from '../src/hooks/vision/pose-observation-client';
 import { COORDINATE_SYSTEM } from '../src/hooks/vision/pose-landmark-recorder';
 import type { PoseObservationFrame } from '../src/hooks/vision/pose-landmark-recorder';
 import { buildPoseObservationSummary } from '../src/hooks/vision/pose-observation-summary';
 import type { PoseObservationSummary } from '../src/hooks/vision/pose-observation-summary';
+
+const CLIENT_UID = 'client-123';
 
 function makeFrame(t: number): PoseObservationFrame {
   return {
@@ -45,53 +48,56 @@ function summaryFixture(): PoseObservationSummary {
   return buildPoseObservationSummary(frames);
 }
 
+function payloadFixture(): PoseObservationPayload {
+  return { ...summaryFixture(), client_uid: CLIENT_UID };
+}
+
 describe('submitPoseObservation', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('POSTs the summary to the versioned pose observations endpoint', async () => {
+  it('POSTs the summary with client_uid to the versioned pose observations endpoint', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(new Response(null, { status: 202 }));
     vi.stubGlobal('fetch', fetchMock);
-    const summary = summaryFixture();
+    const payload = payloadFixture();
 
-    await submitPoseObservation('http://localhost:12393/', summary);
+    await submitPoseObservation('http://localhost:12393/', payload);
 
     expect(fetchMock).toHaveBeenCalledWith(
       'http://localhost:12393/api/v1/pose-observations',
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(summary),
+        body: JSON.stringify(payload),
       },
     );
   });
 
-  it('keeps the payload to the objective pose observation contract only', async () => {
+  it('includes a non-empty client_uid in the payload', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 202 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await submitPoseObservation('http://localhost:12393', payloadFixture());
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.client_uid).toBe(CLIENT_UID);
+    expect(typeof body.client_uid).toBe('string');
+  });
+
+  it('keeps the payload to the objective pose observation contract plus client_uid only', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(new Response(null, { status: 202 }));
     vi.stubGlobal('fetch', fetchMock);
     const summary = summaryFixture();
 
-    await submitPoseObservation('http://localhost:12393', summary);
+    await submitPoseObservation('http://localhost:12393', payloadFixture());
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
-    expect(Object.keys(body)).toEqual([
-      'version',
-      'period',
-      'coordinateSystem',
-      'samplingIntervalMs',
-      'people',
-      'samples',
-      'trajectories',
-      'relativePositions',
-      'angles',
-      'holds',
-      'repetitions',
-      'missing',
-      'quality',
-    ]);
+    expect(Object.keys(body)).toEqual([...Object.keys(summary), 'client_uid']);
   });
 
   it('never includes raw image fields or fixed action labels in the payload', async () => {
@@ -99,9 +105,8 @@ describe('submitPoseObservation', () => {
       .fn()
       .mockResolvedValue(new Response(null, { status: 202 }));
     vi.stubGlobal('fetch', fetchMock);
-    const summary = summaryFixture();
 
-    await submitPoseObservation('http://localhost:12393', summary);
+    await submitPoseObservation('http://localhost:12393', payloadFixture());
 
     const serialized = JSON.stringify(
       JSON.parse(fetchMock.mock.calls[0][1].body),
@@ -117,9 +122,8 @@ describe('submitPoseObservation', () => {
       .fn()
       .mockResolvedValue(new Response(null, { status: 202 }));
     vi.stubGlobal('fetch', fetchMock);
-    const summary = summaryFixture();
 
-    await submitPoseObservation('http://localhost:12393', summary);
+    await submitPoseObservation('http://localhost:12393', payloadFixture());
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     const intFields: Array<[unknown, string]> = [
@@ -151,7 +155,7 @@ describe('submitPoseObservation', () => {
     );
 
     await expect(
-      submitPoseObservation('http://localhost:12393', summaryFixture()),
+      submitPoseObservation('http://localhost:12393', payloadFixture()),
     ).rejects.toThrow('Pose observation request failed with status 422');
   });
 });
@@ -169,7 +173,7 @@ describe('submitPoseObservationWithRetry', () => {
 
     await submitPoseObservationWithRetry(
       'http://localhost:12393',
-      summaryFixture(),
+      payloadFixture(),
       onRetry,
       async () => {},
     );
@@ -191,7 +195,7 @@ describe('submitPoseObservationWithRetry', () => {
     await expect(
       submitPoseObservationWithRetry(
         'http://localhost:12393',
-        summaryFixture(),
+        payloadFixture(),
         onRetry,
         async () => {},
       ),
@@ -200,7 +204,7 @@ describe('submitPoseObservationWithRetry', () => {
 
     await submitPoseObservationWithRetry(
       'http://localhost:12393',
-      summaryFixture(),
+      payloadFixture(),
       onRetry,
       async () => {},
     );

@@ -1,15 +1,19 @@
 import type { PoseObservationSummary } from './pose-observation-summary';
 
+export interface PoseObservationPayload extends PoseObservationSummary {
+  client_uid: string;
+}
+
 export async function submitPoseObservation(
   baseUrl: string,
-  summary: PoseObservationSummary,
+  payload: PoseObservationPayload,
 ) {
   const response = await fetch(
     `${baseUrl.replace(/\/$/, '')}/api/v1/pose-observations`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(summary),
+      body: JSON.stringify(payload),
     },
   );
 
@@ -28,7 +32,7 @@ export async function submitPoseObservation(
 
 export async function submitPoseObservationWithRetry(
   baseUrl: string,
-  summary: PoseObservationSummary,
+  payload: PoseObservationPayload,
   onRetry: () => void,
   retryDelay = (attempt: number) =>
     new Promise<void>((resolve) => {
@@ -37,7 +41,7 @@ export async function submitPoseObservationWithRetry(
 ) {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      await submitPoseObservation(baseUrl, summary);
+      await submitPoseObservation(baseUrl, payload);
       return;
     } catch (error) {
       if (attempt === 3) throw error;
