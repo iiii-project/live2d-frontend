@@ -6,6 +6,12 @@ import {
 import type { PoseObservationFrame } from './pose-landmark-recorder';
 import { PoseObservationBuffer } from './pose-observation-summary';
 import type { PoseObservationSummary } from './pose-observation-summary';
+import {
+  LOCAL_POSE_PROCESSING_COMPLETE,
+  LOCAL_POSE_PROCESSING_STARTED,
+  LOCAL_POSE_MOTION_WINDOW,
+  type LocalPoseMotionWindow,
+} from './pose-observation-events';
 
 export const LOCAL_POSE_OBSERVATION = 'local-pose-observation';
 export const LOCAL_POSE_OBSERVATION_SUMMARY = 'local-pose-observation-summary';
@@ -50,6 +56,7 @@ export function useLocalPoseLandmarker(
       );
       const summary = bufferRef.current.push(frame);
       if (summary) {
+        const completedFrames = bufferRef.current.takeCompletedFrames();
         setLastSummary(summary);
         setSummaryCount((count) => count + 1);
         window.dispatchEvent(
@@ -58,8 +65,26 @@ export function useLocalPoseLandmarker(
             { detail: summary },
           ),
         );
+        console.info(
+          '[Pose] Motion window ready:',
+          completedFrames.length,
+          'frames',
+        );
+        window.dispatchEvent(
+          new CustomEvent<LocalPoseMotionWindow>(LOCAL_POSE_MOTION_WINDOW, {
+            detail: {
+              summary,
+              frames: completedFrames,
+            },
+          }),
+        );
       }
     });
+
+    const pause = () => recorder.pause();
+    const resume = () => recorder.resume();
+    window.addEventListener(LOCAL_POSE_PROCESSING_STARTED, pause);
+    window.addEventListener(LOCAL_POSE_PROCESSING_COMPLETE, resume);
 
     const start = async () => {
       try {
@@ -76,6 +101,8 @@ export function useLocalPoseLandmarker(
     return () => {
       cancelled = true;
       unsubscribe();
+      window.removeEventListener(LOCAL_POSE_PROCESSING_STARTED, pause);
+      window.removeEventListener(LOCAL_POSE_PROCESSING_COMPLETE, resume);
       recorder.stop();
       if (recorderRef.current === recorder) recorderRef.current = null;
       setIsTracking(false);

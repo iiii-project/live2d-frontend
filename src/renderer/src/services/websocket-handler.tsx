@@ -21,6 +21,7 @@ import { useLocalStorage } from '@/hooks/utils/use-local-storage';
 import { useGroup } from '@/context/group-context';
 import { useInterrupt } from '@/hooks/utils/use-interrupt';
 import { useBrowser } from '@/context/browser-context';
+import { LOCAL_POSE_PROCESSING_COMPLETE } from '@/hooks/vision/pose-observation-events';
 
 function WebSocketHandler({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
@@ -107,6 +108,9 @@ function WebSocketHandler({ children }: { children: React.ReactNode }) {
         if (message.text) {
           handleControlMessage(message.text);
         }
+        break;
+      case 'pose-response-complete':
+        window.dispatchEvent(new Event(LOCAL_POSE_PROCESSING_COMPLETE));
         break;
       case 'set-model-and-conf':
         setAiState('loading');

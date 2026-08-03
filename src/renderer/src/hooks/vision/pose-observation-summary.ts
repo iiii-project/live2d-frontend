@@ -5,7 +5,7 @@ import type {
   PoseObservationFrame,
 } from './pose-landmark-recorder';
 
-export const OBSERVATION_WINDOW_MS = 5_000;
+export const OBSERVATION_WINDOW_MS = 3_000;
 export const DEFAULT_SAMPLE_INTERVAL_MS = 200;
 export const STATIONARY_SPEED_THRESHOLD = 0.02;
 export const STATIONARY_RADIUS = 0.02;
@@ -688,6 +688,7 @@ export class PoseObservationBuffer {
   private readonly windowDurationMs: number;
   private readonly summaryOptions: PoseObservationSummaryOptions;
   private frames: PoseObservationFrame[] = [];
+  private completedFrames: PoseObservationFrame[] = [];
   private windowStart: number | null = null;
 
   constructor(options: PoseObservationBufferOptions = {}) {
@@ -713,10 +714,17 @@ export class PoseObservationBuffer {
         this.frames,
         this.summaryOptions,
       );
+      this.completedFrames = this.frames.slice();
       this.reset();
       return summary;
     }
     return null;
+  }
+
+  takeCompletedFrames(): PoseObservationFrame[] {
+    const frames = this.completedFrames;
+    this.completedFrames = [];
+    return frames;
   }
 
   reset(): void {

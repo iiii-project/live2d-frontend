@@ -231,6 +231,17 @@ export class PoseLandmarkRecorder {
     this.closeLandmarkers();
   }
 
+  pause(): void {
+    this.running = false;
+    cancelAnimationFrame(this.frameId);
+  }
+
+  resume(): void {
+    if (this.running || !this.video) return;
+    this.running = true;
+    this.frameId = requestAnimationFrame(this.loop);
+  }
+
   processFrame(now = performance.now()): PoseObservationFrame | null {
     if (!this.running || !this.video) return null;
     const video = this.video;

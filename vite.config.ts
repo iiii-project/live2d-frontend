@@ -85,6 +85,7 @@ const createConfig = async (outDir: string) => ({
       '/live2d-models': 'http://127.0.0.1:12393',
       '/api/v1/vision-events': 'http://127.0.0.1:12393',
       '/api/v1/pose-observations': 'http://127.0.0.1:12393',
+      '/api/v1/motion-to-text': 'http://127.0.0.1:12393',
     },
   },
   build: {

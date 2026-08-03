@@ -2,6 +2,7 @@ import type { PoseObservationSummary } from './pose-observation-summary';
 
 export interface PoseObservationPayload extends PoseObservationSummary {
   client_uid: string;
+  motion_description?: string;
 }
 
 export async function submitPoseObservation(
