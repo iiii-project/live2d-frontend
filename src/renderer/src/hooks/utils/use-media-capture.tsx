@@ -23,6 +23,25 @@ declare class ImageCapture {
   grabFrame(): Promise<ImageBitmap>;
 }
 
+async function grabFrameFromVideo(stream: MediaStream): Promise<ImageBitmap> {
+  const video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.srcObject = stream;
+  try {
+    await video.play();
+    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+      await new Promise<void>((resolve) => {
+        video.addEventListener('loadeddata', () => resolve(), { once: true });
+      });
+    }
+    return await createImageBitmap(video);
+  } finally {
+    video.pause();
+    video.srcObject = null;
+  }
+}
+
 interface ImageData {
   source: 'camera' | 'screen';
   data: string;
@@ -73,9 +92,18 @@ export function useMediaCapture() {
         return null;
       }
 
-      const imageCapture = new ImageCapture(videoTrack);
       try {
-        const bitmap = await imageCapture.grabFrame();
+        let bitmap: ImageBitmap;
+        if ('ImageCapture' in window) {
+          try {
+            const imageCapture = new ImageCapture(videoTrack);
+            bitmap = await imageCapture.grabFrame();
+          } catch {
+            bitmap = await grabFrameFromVideo(stream);
+          }
+        } else {
+          bitmap = await grabFrameFromVideo(stream);
+        }
         const lease = createVisionFrameLease(bitmap);
         return await analyzeVisionFrame(
           lease,

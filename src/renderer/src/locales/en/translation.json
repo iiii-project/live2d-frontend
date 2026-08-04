@@ -81,7 +81,8 @@
     "screenControl": "Click to start screen capture",
     "screenStopping": "Click to stop screen capture",
     "raiseHand": "Raise hand",
-    "attachFile": "Attach file"
+    "attachFile": "Attach file",
+    "quietMode": "Quiet mode"
   },
   "sidebar": {
     "camera": "Camera",

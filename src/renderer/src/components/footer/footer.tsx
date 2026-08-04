@@ -1,8 +1,12 @@
 /* eslint-disable react/require-default-props */
+import { Box, Textarea, IconButton, HStack } from '@chakra-ui/react';
 import {
-  Box, Textarea, IconButton, HStack,
-} from '@chakra-ui/react';
-import { BsMicFill, BsMicMuteFill, BsPaperclip } from 'react-icons/bs';
+  BsMicFill,
+  BsMicMuteFill,
+  BsPaperclip,
+  BsVolumeMuteFill,
+  BsVolumeUpFill,
+} from 'react-icons/bs';
 import { IoHandRightSharp } from 'react-icons/io5';
 import { FiChevronDown } from 'react-icons/fi';
 import { memo } from 'react';
@@ -14,27 +18,29 @@ import { useFooter } from '@/hooks/footer/use-footer';
 
 // Type definitions
 interface FooterProps {
-  isCollapsed?: boolean
-  onToggle?: () => void
+  isCollapsed?: boolean;
+  onToggle?: () => void;
 }
 
 interface ToggleButtonProps {
-  isCollapsed: boolean
-  onToggle?: () => void
+  isCollapsed: boolean;
+  onToggle?: () => void;
 }
 
 interface ActionButtonsProps {
-  micOn: boolean
-  onMicToggle: () => void
-  onInterrupt: () => void
+  micOn: boolean;
+  onMicToggle: () => void;
+  onInterrupt: () => void;
+  onQuietToggle: () => void;
+  quiet: boolean;
 }
 
 interface MessageInputProps {
-  value: string
-  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
-  onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
-  onCompositionStart: () => void
-  onCompositionEnd: () => void
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  onKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onCompositionStart: () => void;
+  onCompositionEnd: () => void;
 }
 
 // Reusable components
@@ -53,64 +59,82 @@ const ToggleButton = memo(({ isCollapsed, onToggle }: ToggleButtonProps) => (
 
 ToggleButton.displayName = 'ToggleButton';
 
-const ActionButtons = memo(({ micOn, onMicToggle, onInterrupt }: ActionButtonsProps) => {
-  const { t } = useTranslation();
+const ActionButtons = memo(
+  ({
+    micOn,
+    onMicToggle,
+    onInterrupt,
+    onQuietToggle,
+    quiet,
+  }: ActionButtonsProps) => {
+    const { t } = useTranslation();
 
-  return (
-    <HStack gap={2}>
-      <IconButton
-        bg={micOn ? 'green.500' : 'red.500'}
-        {...footerStyles.footer.actionButton}
-        onClick={onMicToggle}
-      >
-        {micOn ? <BsMicFill /> : <BsMicMuteFill />}
-      </IconButton>
-      <IconButton
-        aria-label={t('footer.raiseHand')}
-        bg="yellow.500"
-        {...footerStyles.footer.actionButton}
-        onClick={onInterrupt}
-      >
-        <IoHandRightSharp size="24" />
-      </IconButton>
-    </HStack>
-  );
-});
+    return (
+      <HStack gap={2}>
+        <IconButton
+          aria-label={t('footer.quietMode')}
+          bg={quiet ? 'purple.500' : 'gray.600'}
+          {...footerStyles.footer.actionButton}
+          onClick={onQuietToggle}
+        >
+          {quiet ? <BsVolumeMuteFill /> : <BsVolumeUpFill />}
+        </IconButton>
+        <IconButton
+          bg={micOn ? 'green.500' : 'red.500'}
+          {...footerStyles.footer.actionButton}
+          onClick={onMicToggle}
+        >
+          {micOn ? <BsMicFill /> : <BsMicMuteFill />}
+        </IconButton>
+        <IconButton
+          aria-label={t('footer.raiseHand')}
+          bg="yellow.500"
+          {...footerStyles.footer.actionButton}
+          onClick={onInterrupt}
+        >
+          <IoHandRightSharp size="24" />
+        </IconButton>
+      </HStack>
+    );
+  },
+);
 
 ActionButtons.displayName = 'ActionButtons';
 
-const MessageInput = memo(({
-  value,
-  onChange,
-  onKeyDown,
-  onCompositionStart,
-  onCompositionEnd,
-}: MessageInputProps) => {
-  const { t } = useTranslation();
+const MessageInput = memo(
+  ({
+    value,
+    onChange,
+    onKeyDown,
+    onCompositionStart,
+    onCompositionEnd,
+  }: MessageInputProps) => {
+    const { t } = useTranslation();
 
-  return (
-    <InputGroup flex={1}>
-      <Box position="relative" width="100%">
-        <IconButton
-          aria-label={t('footer.attachFile')}
-          variant="ghost"
-          {...footerStyles.footer.attachButton}
-        >
-          <BsPaperclip size="24" />
-        </IconButton>
-        <Textarea
-          value={value}
-          onChange={onChange}
-          onKeyDown={onKeyDown}
-          onCompositionStart={onCompositionStart}
-          onCompositionEnd={onCompositionEnd}
-          placeholder={t('footer.typeYourMessage')}
-          {...footerStyles.footer.input}
-        />
-      </Box>
-    </InputGroup>
-  );
-});
+    return (
+      <InputGroup flex={1}>
+        <Box position="relative" width="100%">
+          <IconButton
+            aria-label={t('footer.attachFile')}
+            variant="ghost"
+            {...footerStyles.footer.attachButton}
+          >
+            <BsPaperclip size="24" />
+          </IconButton>
+          <Textarea
+            value={value}
+            onChange={onChange}
+            onKeyDown={onKeyDown}
+            onCompositionStart={onCompositionStart}
+            onCompositionEnd={onCompositionEnd}
+            placeholder={t('footer.typeYourMessage')}
+            {...footerStyles.footer.input}
+          />
+        </Box>
+      </InputGroup>
+    );
+  },
+);
 
 MessageInput.displayName = 'MessageInput';
 
@@ -123,6 +147,8 @@ function Footer({ isCollapsed = false, onToggle }: FooterProps): JSX.Element {
     handleCompositionStart,
     handleCompositionEnd,
     handleInterrupt,
+    handleQuietToggle,
+    quiet,
     handleMicToggle,
     micOn,
   } = useFooter();
@@ -141,6 +167,8 @@ function Footer({ isCollapsed = false, onToggle }: FooterProps): JSX.Element {
               micOn={micOn}
               onMicToggle={handleMicToggle}
               onInterrupt={handleInterrupt}
+              onQuietToggle={handleQuietToggle}
+              quiet={quiet}
             />
           </Box>
 

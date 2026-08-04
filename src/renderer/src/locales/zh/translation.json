@@ -81,7 +81,8 @@
     "screenControl": "點擊開始螢幕擷取",
     "screenStopping": "點擊停止螢幕擷取",
     "raiseHand": "舉手",
-    "attachFile": "附加檔案"
+    "attachFile": "附加檔案",
+    "quietMode": "安靜模式"
   },
   "sidebar": {
     "camera": "攝影機",
