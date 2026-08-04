@@ -15,6 +15,32 @@ export const REPETITION_MIN_PEAK_SPEED = 0.05;
 export const REPETITION_MIN_CYCLE_GAP_MS = 300;
 
 const BODY_JOINT_COUNT = 33;
+const HAND_LANDMARK_COUNT = 21;
+const HAND_WRIST_INDEX = 0;
+
+// MediaPipe hand landmark contract: one angle triple per finger, taken at
+// the middle joint (PIP for four fingers, IP for the thumb), so the reported
+// angle tracks curl/extension without needing a semantic gesture label.
+const HAND_FINGER_ANGLE_TRIPLES: Array<{
+  finger: string;
+  first: number;
+  joint: number;
+  second: number;
+}> = [
+  { finger: 'thumb', first: 2, joint: 3, second: 4 },
+  { finger: 'index', first: 5, joint: 6, second: 8 },
+  { finger: 'middle', first: 9, joint: 10, second: 12 },
+  { finger: 'ring', first: 13, joint: 14, second: 16 },
+  { finger: 'pinky', first: 17, joint: 18, second: 20 },
+];
+
+const HAND_FINGERTIPS: Array<{ finger: string; tip: number }> = [
+  { finger: 'thumb', tip: 4 },
+  { finger: 'index', tip: 8 },
+  { finger: 'middle', tip: 12 },
+  { finger: 'ring', tip: 16 },
+  { finger: 'pinky', tip: 20 },
+];
 
 const RELATIVE_POSITION_PAIRS: Array<[number, number]> = [
   [0, 23],
@@ -147,6 +173,42 @@ export interface QualitySummary {
   overallQualityScore: number;
 }
 
+export interface HandFingerCurl {
+  finger: string;
+  sampleCount: number;
+  meanAngleDeg: number;
+  minAngleDeg: number;
+  maxAngleDeg: number;
+  changeRangeDeg: number;
+}
+
+export interface HandFingertipDistance {
+  finger: string;
+  sampleCount: number;
+  meanDistance: number;
+  minDistance: number;
+  maxDistance: number;
+}
+
+export interface HandPinchDistance {
+  sampleCount: number;
+  meanDistance: number;
+  minDistance: number;
+  maxDistance: number;
+}
+
+export interface HandShapeSummary {
+  handedness: string;
+  sampleCount: number;
+  visibleRatio: number;
+  fingerCurls: HandFingerCurl[];
+  fingertipToWristDistances: HandFingertipDistance[];
+  thumbTipToIndexTipDistance: HandPinchDistance;
+  meanWristX: number;
+  meanWristY: number;
+  meanWristZ: number;
+}
+
 export interface PoseObservationSummary {
   version: 1;
   period: PoseObservationPeriod;
@@ -159,6 +221,7 @@ export interface PoseObservationSummary {
   angles: JointAngleSeries[];
   holds: HoldSegment[];
   repetitions: RepetitionTiming[];
+  handShapes: HandShapeSummary[];
   missing: MissingSummary;
   quality: QualitySummary;
 }
@@ -192,6 +255,7 @@ export function buildPoseObservationSummary(
     angles: computeAngles(samples),
     holds: computeHolds(samples),
     repetitions: computeRepetitions(samples),
+    handShapes: computeHandShapes(samples),
     missing,
     quality: computeQuality(samples, period, people, missing),
   };
@@ -563,6 +627,105 @@ function computeRepetitions(samples: PoseSample[]): RepetitionTiming[] {
     });
   }
   return repetitions;
+}
+
+function collectHandLandmarkSeries(
+  samples: PoseSample[],
+  handedness: string,
+): LandmarkPoint[][] {
+  const series: LandmarkPoint[][] = [];
+  for (const sample of samples) {
+    const handIndex = sample.hands.handedness.findIndex(
+      (entry) => entry.handedness === handedness,
+    );
+    if (handIndex === -1) continue;
+    const landmarks = sample.hands.landmarks[handIndex];
+    if (landmarks && landmarks.length === HAND_LANDMARK_COUNT) {
+      series.push(landmarks);
+    }
+  }
+  return series;
+}
+
+function computeHandShapes(samples: PoseSample[]): HandShapeSummary[] {
+  const handednessLabels = new Set<string>();
+  for (const sample of samples) {
+    for (const entry of sample.hands.handedness) {
+      handednessLabels.add(entry.handedness);
+    }
+  }
+
+  const summaries: HandShapeSummary[] = [];
+  for (const handedness of handednessLabels) {
+    const landmarkSeries = collectHandLandmarkSeries(samples, handedness);
+    if (landmarkSeries.length === 0) continue;
+
+    const fingerCurls = HAND_FINGER_ANGLE_TRIPLES.map(
+      ({ finger, first, joint, second }) => {
+        const values: number[] = [];
+        for (const landmarks of landmarkSeries) {
+          const angle = angleDeg(
+            landmarks[first],
+            landmarks[joint],
+            landmarks[second],
+          );
+          if (angle !== null) values.push(angle);
+        }
+        const minAngleDeg = values.length ? Math.min(...values) : 0;
+        const maxAngleDeg = values.length ? Math.max(...values) : 0;
+        return {
+          finger,
+          sampleCount: values.length,
+          meanAngleDeg: values.length ? mean(values) : 0,
+          minAngleDeg,
+          maxAngleDeg,
+          changeRangeDeg: maxAngleDeg - minAngleDeg,
+        };
+      },
+    );
+
+    const fingertipToWristDistances = HAND_FINGERTIPS.map(
+      ({ finger, tip }) => {
+        const values = landmarkSeries.map((landmarks) =>
+          distance3(landmarks[HAND_WRIST_INDEX], landmarks[tip]),
+        );
+        return {
+          finger,
+          sampleCount: values.length,
+          meanDistance: values.length ? mean(values) : 0,
+          minDistance: values.length ? Math.min(...values) : 0,
+          maxDistance: values.length ? Math.max(...values) : 0,
+        };
+      },
+    );
+
+    const pinchDistances = landmarkSeries.map((landmarks) =>
+      distance3(landmarks[4], landmarks[8]),
+    );
+    const wristMean = meanPosition(
+      landmarkSeries.map((landmarks) => landmarks[HAND_WRIST_INDEX]),
+    );
+
+    summaries.push({
+      handedness,
+      sampleCount: landmarkSeries.length,
+      visibleRatio: samples.length
+        ? landmarkSeries.length / samples.length
+        : 0,
+      fingerCurls,
+      fingertipToWristDistances,
+      thumbTipToIndexTipDistance: {
+        sampleCount: pinchDistances.length,
+        meanDistance: pinchDistances.length ? mean(pinchDistances) : 0,
+        minDistance: pinchDistances.length ? Math.min(...pinchDistances) : 0,
+        maxDistance: pinchDistances.length ? Math.max(...pinchDistances) : 0,
+      },
+      meanWristX: wristMean.x,
+      meanWristY: wristMean.y,
+      meanWristZ: wristMean.z,
+    });
+  }
+  return summaries;
 }
 
 function computeMissing(

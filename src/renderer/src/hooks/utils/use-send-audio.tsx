@@ -1,10 +1,8 @@
 import { useCallback } from "react";
 import { useWebSocket } from "@/context/websocket-context";
-import { useMediaCapture } from "@/hooks/utils/use-media-capture";
 
 export function useSendAudio() {
   const { sendMessage } = useWebSocket();
-  const { captureAllMedia } = useMediaCapture();
 
   const sendAudioPartition = useCallback(
     async (audio: Float32Array) => {
@@ -17,15 +15,13 @@ export function useSendAudio() {
         sendMessage({
           type: "mic-audio-data",
           audio: Array.from(chunk),
-          // Only send images with first chunk
         });
       }
 
       // Send end signal after all chunks
-      const images = await captureAllMedia();
-      sendMessage({ type: "mic-audio-end", images });
+      sendMessage({ type: "mic-audio-end" });
     },
-    [sendMessage, captureAllMedia],
+    [sendMessage],
   );
 
   return {

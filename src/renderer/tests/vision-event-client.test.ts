@@ -12,7 +12,10 @@ const payload: VisionEventPayload = {
 describe('submitVisionEvent', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it.each(['wave', 'thumbs_up', 'smile', 'mouth_open', 'hug', 'heart'] as const)('sends %s using only the versioned API contract fields', async (event) => {
+  it.each([
+    'wave', 'thumbs_up', 'thumbs_down', 'victory', 'love_you', 'pointing_up', 'fist', 'hug', 'heart',
+    'smile', 'mouth_open', 'surprised', 'sad', 'angry', 'wink', 'kiss', 'tongue_out', 'eyebrow_raise',
+  ] as const)('sends %s using only the versioned API contract fields', async (event) => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
     vi.stubGlobal('fetch', fetchMock);
 

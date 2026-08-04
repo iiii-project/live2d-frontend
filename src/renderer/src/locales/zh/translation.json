@@ -31,13 +31,7 @@
       "languages": {
         "english": "英文",
         "traditionalChinese": "繁體中文"
-      },
-      "imageCompressionQuality": "圖片壓縮品質",
-      "imageCompressionQualityPlaceholder": "輸入壓縮品質（0-100）",
-      "imageCompressionQualityHelp": "JPEG 壓縮品質（0.1-1.0）。預設為 0.8，以減少檔案大小；圖片傳送至 AI 模型時不會額外壓縮，可能造成檔案過大。",
-      "imageMaxWidth": "圖片最大寬度",
-      "imageMaxWidthPlaceholder": "輸入最大寬度（像素）",
-      "imageMaxWidthHelp": "圖片縮放的最大寬度。超過此寬度的圖片會依比例縮小。設為 0 表示不限制大小。部分 AI 模型處理過大圖片時可能有限制；但多數模型可自動處理，因此預設為 0，以保留原始圖片。"
+      }
     },
     "live2d": {
       "model": "Live2D 模型",

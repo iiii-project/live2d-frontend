@@ -261,29 +261,29 @@ export class PoseLandmarkRecorder {
       mediaTimestampMs: timestamp,
       coordinateSystem: COORDINATE_SYSTEM,
       body: {
-        detected: Boolean(poseResult?.landmarks.length),
+        detected: Boolean(poseResult?.landmarks?.length),
         landmarks:
-          poseResult?.landmarks[0]?.map((point, index) =>
+          poseResult?.landmarks?.[0]?.map((point, index) =>
             toLandmarkPoint(point, index, 'pose', this.visibilityThreshold),
           ) ?? [],
       },
       face: {
-        detected: Boolean(faceResult?.faceLandmarks.length),
+        detected: Boolean(faceResult?.faceLandmarks?.length),
         landmarks:
-          faceResult?.faceLandmarks[0]?.map((point, index) =>
+          faceResult?.faceLandmarks?.[0]?.map((point, index) =>
             toLandmarkPoint(point, index, 'face', this.visibilityThreshold),
           ) ?? [],
       },
       hands: {
-        detected: Boolean(handResult?.landmarks.length),
+        detected: Boolean(handResult?.landmarks?.length),
         landmarks:
-          handResult?.landmarks.map((hand) =>
+          handResult?.landmarks?.map((hand) =>
             hand.map((point, index) =>
               toLandmarkPoint(point, index, 'hand', this.visibilityThreshold),
             ),
           ) ?? [],
         handedness:
-          handResult?.handedness.map((categories) => {
+          handResult?.handedness?.map((categories) => {
             const top = categories[0];
             return {
               handedness: top?.categoryName ?? 'unknown',
@@ -300,7 +300,13 @@ export class PoseLandmarkRecorder {
 
   private loop = (): void => {
     if (!this.running) return;
-    this.processFrame();
+    try {
+      this.processFrame();
+    } catch (error) {
+      // A single bad frame must never permanently stop this loop (an
+      // uncaught throw here would stop requestAnimationFrame forever).
+      console.error('Pose landmark frame failed:', error);
+    }
     if (this.running) {
       this.frameId = requestAnimationFrame(this.loop);
     }

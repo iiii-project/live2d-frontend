@@ -4,7 +4,6 @@ import { useAiState } from '@/context/ai-state-context';
 import { useInterrupt } from '@/components/canvas/live2d';
 import { useChatHistory } from '@/context/chat-history-context';
 import { useVAD } from '@/context/vad-context';
-import { useMediaCapture } from '@/hooks/utils/use-media-capture';
 
 export function useTextInput() {
   const [inputText, setInputText] = useState('');
@@ -14,7 +13,6 @@ export function useTextInput() {
   const { interrupt } = useInterrupt();
   const { appendHumanMessage } = useChatHistory();
   const { stopMic, autoStopMic } = useVAD();
-  const { captureAllMedia } = useMediaCapture();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
@@ -26,13 +24,10 @@ export function useTextInput() {
       interrupt();
     }
 
-    const images = await captureAllMedia();
-
     appendHumanMessage(inputText.trim());
     wsContext.sendMessage({
       type: 'text-input',
       text: inputText.trim(),
-      images,
     });
 
     if (autoStopMic) stopMic();

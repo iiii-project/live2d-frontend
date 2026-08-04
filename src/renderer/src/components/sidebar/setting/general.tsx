@@ -139,34 +139,6 @@ function General({ onSave, onCancel }: GeneralProps): JSX.Element {
         onChange={(value) => handleSettingChange("baseUrl", value)}
         placeholder={t("settings.general.baseUrlPlaceholder")}
       />
-
-      <InputField
-        label={t("settings.general.imageCompressionQuality")}
-        value={settings.imageCompressionQuality.toString()}
-        onChange={(value) => {
-          const quality = parseFloat(value as string);
-          if (!Number.isNaN(quality) && quality >= 0.1 && quality <= 1.0) {
-            handleSettingChange("imageCompressionQuality", quality);
-          } else if (value === "") {
-            handleSettingChange("imageCompressionQuality", settings.imageCompressionQuality);
-          }
-        }}
-        help={t("settings.general.imageCompressionQualityHelp")}
-      />
-
-      <InputField
-        label={t("settings.general.imageMaxWidth")}
-        value={settings.imageMaxWidth.toString()}
-        onChange={(value) => {
-          const maxWidth = parseInt(value as string, 10);
-          if (!Number.isNaN(maxWidth) && maxWidth >= 0) {
-            handleSettingChange("imageMaxWidth", maxWidth);
-          } else if (value === "") {
-            handleSettingChange("imageMaxWidth", settings.imageMaxWidth);
-          }
-        }}
-        help={t("settings.general.imageMaxWidthHelp")}
-      />
     </Stack>
   );
 }

@@ -5,16 +5,29 @@ import { useTranslation } from 'react-i18next';
 import { Tooltip } from '@/components/ui/tooltip';
 import { sidebarStyles } from './sidebar-styles';
 import { useCameraPanel } from '@/hooks/sidebar/use-camera-panel';
-import { useMediaCapture } from '@/hooks/utils/use-media-capture';
-import { useWebSocket } from '@/context/websocket-context';
-import { useGroup } from '@/context/group-context';
-import { wsService } from '@/services/websocket-service';
-import {
-  VISION_OBSERVATION_VERSION,
-  type VisionObservationMessage,
-} from '@/hooks/vision/vision-observation-stream-contract';
+import { useLocalVisionRecognition } from '@/hooks/vision/use-local-vision-recognition';
+import type { DetectedLandmarks } from '@/hooks/vision/use-local-vision-recognition';
+import { useVisionEventSubmission } from '@/hooks/vision/use-vision-event-submission';
+import { useLocalPoseLandmarker } from '@/hooks/vision/use-local-pose-landmarker';
+import { usePoseObservationSubmission } from '@/hooks/vision/use-pose-observation-submission';
 
-const VISION_SAMPLING_INTERVAL_MS = 1_000;
+// 21-point MediaPipe hand landmark topology, used only to draw the debug skeleton.
+const HAND_CONNECTIONS: Array<[number, number]> = [
+  [0, 1], [1, 2], [2, 3], [3, 4],
+  [0, 5], [5, 6], [6, 7], [7, 8],
+  [0, 9], [9, 10], [10, 11], [11, 12],
+  [0, 13], [13, 14], [14, 15], [15, 16],
+  [0, 17], [17, 18], [18, 19], [19, 20],
+  [5, 9], [9, 13], [13, 17],
+];
+
+// MediaPipe Pose landmark indices for the arms only (shoulder-elbow-wrist),
+// used only to draw the debug skeleton.
+const ARM_CONNECTIONS: Array<[number, number]> = [
+  [11, 12], // shoulder to shoulder
+  [11, 13], [13, 15], // left arm: shoulder-elbow-wrist
+  [12, 14], [14, 16], // right arm: shoulder-elbow-wrist
+];
 
 // Reusable components
 function LiveIndicator() {
@@ -72,6 +85,150 @@ function VideoStream({
   );
 }
 
+// Draws the live hand/face/arm detection points on top of the video so the
+// user can confirm what MediaPipe is actually picking up, without re-running
+// detection itself (it just reads the refs the recognition hooks already fill).
+function LandmarkOverlay({
+  videoRef,
+  landmarksRef,
+  bodyLandmarksRef,
+  isStreaming,
+}: {
+  videoRef: React.RefObject<HTMLVideoElement>;
+  landmarksRef: React.RefObject<DetectedLandmarks>;
+  bodyLandmarksRef: React.RefObject<Array<{ x: number; y: number }>>;
+  isStreaming: boolean;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    if (!isStreaming) return undefined;
+
+    let cancelled = false;
+    let frameId = 0;
+
+    const draw = () => {
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      const container = canvas?.parentElement;
+      if (canvas && video && container && video.videoWidth && video.videoHeight) {
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+        }
+        const ctx = canvas.getContext('2d');
+        if (ctx && width && height) {
+          ctx.clearRect(0, 0, width, height);
+
+          // Replicate the video's `object-fit: cover` scaling so points line up.
+          const scale = Math.max(width / video.videoWidth, height / video.videoHeight);
+          const scaledWidth = video.videoWidth * scale;
+          const scaledHeight = video.videoHeight * scale;
+          const offsetX = (width - scaledWidth) / 2;
+          const offsetY = (height - scaledHeight) / 2;
+          // Landmarks are in the raw (unmirrored) camera frame, but the video
+          // preview is mirrored via CSS for a natural selfie view. Mirror the
+          // x coordinate here directly instead of transforming the canvas, so
+          // there's no separate CSS transform that could drift out of sync.
+          const toPixel = (point: { x: number; y: number }) => ({
+            x: width - (point.x * scaledWidth + offsetX),
+            y: point.y * scaledHeight + offsetY,
+          });
+
+          const { hands, face } = landmarksRef.current ?? { hands: [], face: null };
+
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = 'rgba(0, 229, 255, 0.85)';
+          ctx.fillStyle = '#00e5ff';
+          for (const hand of hands) {
+            for (const [a, b] of HAND_CONNECTIONS) {
+              const from = hand[a];
+              const to = hand[b];
+              if (!from || !to) continue;
+              const p1 = toPixel(from);
+              const p2 = toPixel(to);
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.stroke();
+            }
+            for (const point of hand) {
+              const p = toPixel(point);
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
+          if (face) {
+            ctx.fillStyle = 'rgba(255, 235, 59, 0.9)';
+            // 468 points is too dense to render individually at a visible size;
+            // draw every 3rd point larger instead so the face is clearly visible.
+            for (let i = 0; i < face.length; i += 3) {
+              const point = face[i];
+              const p = toPixel(point);
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+
+          const body = bodyLandmarksRef.current ?? [];
+          if (body.length) {
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'rgba(76, 217, 100, 0.85)';
+            ctx.fillStyle = '#4cd964';
+            for (const [a, b] of ARM_CONNECTIONS) {
+              const from = body[a];
+              const to = body[b];
+              if (!from || !to) continue;
+              const p1 = toPixel(from);
+              const p2 = toPixel(to);
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.stroke();
+            }
+            for (const index of [11, 12, 13, 14, 15, 16]) {
+              const point = body[index];
+              if (!point) continue;
+              const p = toPixel(point);
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+      }
+      if (!cancelled) frameId = requestAnimationFrame(draw);
+    };
+
+    frameId = requestAnimationFrame(draw);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frameId);
+    };
+  }, [isStreaming, videoRef, landmarksRef, bodyLandmarksRef]);
+
+  if (!isStreaming) return null;
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+      }}
+    />
+  );
+}
+
 // Main component
 function CameraPanel(): JSX.Element {
   const { t } = useTranslation();
@@ -85,60 +242,10 @@ function CameraPanel(): JSX.Element {
     handleMouseEnter,
     handleMouseLeave,
   } = useCameraPanel();
-  const { sendMessage } = useWebSocket();
-  const { selfUid } = useGroup();
-  const { captureCamera } = useMediaCapture();
-  const observationInFlight = useRef(false);
-  const sequence = useRef(0);
-
-  useEffect(() => {
-    if (!isStreaming) return undefined;
-
-    const abortController = new AbortController();
-
-    const observeCamera = async () => {
-      if (!selfUid) return;
-      if (observationInFlight.current) return;
-      observationInFlight.current = true;
-
-      try {
-        const cameraFrame = await captureCamera(abortController.signal);
-        if (cameraFrame) {
-          const message: VisionObservationMessage = {
-            type: 'vision-observation',
-            version: VISION_OBSERVATION_VERSION,
-            client_uid: selfUid,
-            sequence: sequence.current++,
-            captured_at_ms: Date.now(),
-            sampling_interval_ms: VISION_SAMPLING_INTERVAL_MS,
-            frame: {
-              source: 'camera',
-              data: cameraFrame,
-              mime_type: 'image/jpeg',
-            },
-          };
-          sendMessage(message);
-        }
-      } finally {
-        observationInFlight.current = false;
-      }
-    };
-
-    const stateSubscription = wsService.onStateChange((state) => {
-      if (state === 'CLOSING' || state === 'CLOSED') abortController.abort();
-    });
-    void observeCamera();
-    const intervalId = window.setInterval(
-      () => void observeCamera(),
-      VISION_SAMPLING_INTERVAL_MS,
-    );
-
-    return () => {
-      window.clearInterval(intervalId);
-      stateSubscription.unsubscribe();
-      abortController.abort();
-    };
-  }, [captureCamera, isStreaming, selfUid, sendMessage]);
+  const { landmarksRef } = useLocalVisionRecognition(videoRef, isStreaming);
+  useVisionEventSubmission();
+  const { bodyLandmarksRef } = useLocalPoseLandmarker(videoRef, isStreaming);
+  usePoseObservationSubmission();
 
   useEffect(() => {
     if (videoRef.current) {
@@ -177,6 +284,12 @@ function CameraPanel(): JSX.Element {
           ) : (
             <>
               <VideoStream videoRef={videoRef} isStreaming={isStreaming} />
+              <LandmarkOverlay
+                videoRef={videoRef}
+                landmarksRef={landmarksRef}
+                bodyLandmarksRef={bodyLandmarksRef}
+                isStreaming={isStreaming}
+              />
               {!isStreaming && <CameraPlaceholder />}
             </>
           )}

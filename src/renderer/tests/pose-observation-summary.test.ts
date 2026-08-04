@@ -340,3 +340,117 @@ describe('PoseObservationSummary data quality preservation', () => {
     expect(summary.missing.framesWithoutFace).toBe(1);
   });
 });
+
+function handLandmarks(overrides: Record<number, JointOverride> = {}) {
+  return Array.from({ length: 21 }, (_, index) => ({
+    index,
+    x: 0.5,
+    y: 0.5,
+    z: 0,
+    visibility: null as number | null,
+    visible: true,
+    ...(overrides[index] ?? {}),
+  }));
+}
+
+function makeHandFrame(
+  t: number,
+  hands: Array<{ handedness: string; landmarks: ReturnType<typeof handLandmarks> }>,
+): PoseObservationFrame {
+  return {
+    version: 1,
+    relativeTimeMs: t,
+    mediaTimestampMs: t,
+    coordinateSystem: COORDINATE_SYSTEM,
+    body: { detected: true, landmarks: bodyLandmarks() },
+    face: { detected: true, landmarks: [] },
+    hands: {
+      detected: hands.length > 0,
+      landmarks: hands.map((hand) => hand.landmarks),
+      handedness: hands.map((hand) => ({ handedness: hand.handedness, score: 0.95 })),
+    },
+  };
+}
+
+// Colinear points (mcp -> pip -> tip on a straight line) yield a curl angle
+// near 180 deg; folding the tip back over the pip yields a curl angle near 0.
+const EXTENDED_INDEX_FINGER: Record<number, JointOverride> = {
+  0: { x: 0.5, y: 0.9 },
+  5: { x: 0.5, y: 0.7 },
+  6: { x: 0.5, y: 0.5 },
+  8: { x: 0.5, y: 0.3 },
+};
+
+const CURLED_INDEX_FINGER: Record<number, JointOverride> = {
+  0: { x: 0.5, y: 0.9 },
+  5: { x: 0.5, y: 0.7 },
+  6: { x: 0.5, y: 0.5 },
+  8: { x: 0.5, y: 0.65 },
+};
+
+describe('PoseObservationSummary hand shape descriptors', () => {
+  it('reports a wider finger curl angle for an extended finger than a curled one', () => {
+    const extended = buildPoseObservationSummary([
+      makeHandFrame(0, [{ handedness: 'Right', landmarks: handLandmarks(EXTENDED_INDEX_FINGER) }]),
+    ]);
+    const curled = buildPoseObservationSummary([
+      makeHandFrame(0, [{ handedness: 'Right', landmarks: handLandmarks(CURLED_INDEX_FINGER) }]),
+    ]);
+
+    const extendedIndex = extended.handShapes[0].fingerCurls.find((f) => f.finger === 'index');
+    const curledIndex = curled.handShapes[0].fingerCurls.find((f) => f.finger === 'index');
+
+    expect(extendedIndex?.meanAngleDeg).toBeCloseTo(180, 0);
+    expect(curledIndex?.meanAngleDeg).toBeLessThan(extendedIndex!.meanAngleDeg);
+  });
+
+  it('reports fingertip-to-wrist distance and thumb-to-index tip distance', () => {
+    const landmarks = handLandmarks({
+      0: { x: 0, y: 0 },
+      4: { x: 0, y: 3 },
+      8: { x: 4, y: 0 },
+    });
+    const summary = buildPoseObservationSummary([
+      makeHandFrame(0, [{ handedness: 'Left', landmarks }]),
+    ]);
+
+    const thumb = summary.handShapes[0].fingertipToWristDistances.find((f) => f.finger === 'thumb');
+    expect(thumb?.meanDistance).toBeCloseTo(3, 5);
+    expect(summary.handShapes[0].thumbTipToIndexTipDistance.meanDistance).toBeCloseTo(5, 5);
+  });
+
+  it('groups hand shapes by handedness label across frames', () => {
+    const summary = buildPoseObservationSummary([
+      makeHandFrame(0, [
+        { handedness: 'Left', landmarks: handLandmarks(EXTENDED_INDEX_FINGER) },
+        { handedness: 'Right', landmarks: handLandmarks(CURLED_INDEX_FINGER) },
+      ]),
+      makeHandFrame(200, [
+        { handedness: 'Left', landmarks: handLandmarks(EXTENDED_INDEX_FINGER) },
+      ]),
+    ]);
+
+    const handednessLabels = summary.handShapes.map((shape) => shape.handedness).sort();
+    expect(handednessLabels).toEqual(['Left', 'Right']);
+    const left = summary.handShapes.find((shape) => shape.handedness === 'Left');
+    expect(left?.sampleCount).toBe(2);
+    const right = summary.handShapes.find((shape) => shape.handedness === 'Right');
+    expect(right?.sampleCount).toBe(1);
+  });
+
+  it('keeps hand shape values numeric without a fixed gesture label', () => {
+    const summary = buildPoseObservationSummary([
+      makeHandFrame(0, [{ handedness: 'Right', landmarks: handLandmarks(CURLED_INDEX_FINGER) }]),
+    ]);
+
+    const serialized = JSON.stringify(summary.handShapes);
+    expect(serialized).not.toMatch(
+      /fist|pinch|point|wave|thumbs_up|open_palm|gesture/i,
+    );
+  });
+
+  it('omits a hand entirely absent from the observation window', () => {
+    const summary = buildPoseObservationSummary(framesOverWindow(50, 1_000));
+    expect(summary.handShapes).toEqual([]);
+  });
+});

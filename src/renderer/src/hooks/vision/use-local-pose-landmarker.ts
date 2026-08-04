@@ -30,12 +30,17 @@ export function useLocalPoseLandmarker(
   const [summaryCount, setSummaryCount] = useState(0);
   const recorderRef = useRef<PoseLandmarkRecorder | null>(null);
   const bufferRef = useRef(new PoseObservationBuffer());
+  // Updated every detection frame (not just on completed observation
+  // batches) so a debug overlay can draw live body/arm points without
+  // waiting on React state or forcing a render per frame.
+  const bodyLandmarksRef = useRef<Array<{ x: number; y: number }>>([]);
 
   useEffect(() => {
     if (!isStreaming) {
       recorderRef.current?.stop();
       recorderRef.current = null;
       bufferRef.current.reset();
+      bodyLandmarksRef.current = [];
       setIsTracking(false);
       return undefined;
     }
@@ -47,6 +52,7 @@ export function useLocalPoseLandmarker(
 
     const unsubscribe = recorder.subscribe((frame) => {
       if (cancelled) return;
+      bodyLandmarksRef.current = frame.body.detected ? frame.body.landmarks : [];
       setLastObservation(frame);
       setObservationCount((count) => count + 1);
       window.dispatchEvent(
@@ -105,6 +111,7 @@ export function useLocalPoseLandmarker(
       window.removeEventListener(LOCAL_POSE_PROCESSING_COMPLETE, resume);
       recorder.stop();
       if (recorderRef.current === recorder) recorderRef.current = null;
+      bodyLandmarksRef.current = [];
       setIsTracking(false);
     };
   }, [isStreaming, videoRef]);
@@ -116,5 +123,6 @@ export function useLocalPoseLandmarker(
     lastSummary,
     summaryCount,
     coordinateSystem: COORDINATE_SYSTEM,
+    bodyLandmarksRef,
   };
 }
