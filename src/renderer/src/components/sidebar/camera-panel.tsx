@@ -7,8 +7,14 @@ import { sidebarStyles } from './sidebar-styles';
 import { useCameraPanel } from '@/hooks/sidebar/use-camera-panel';
 import { useMediaCapture } from '@/hooks/utils/use-media-capture';
 import { useWebSocket } from '@/context/websocket-context';
-import { useAiState } from '@/context/ai-state-context';
+import { useGroup } from '@/context/group-context';
 import { wsService } from '@/services/websocket-service';
+import {
+  VISION_OBSERVATION_VERSION,
+  type VisionObservationMessage,
+} from '@/hooks/vision/vision-observation-stream-contract';
+
+const VISION_SAMPLING_INTERVAL_MS = 1_000;
 
 // Reusable components
 function LiveIndicator() {
@@ -80,9 +86,10 @@ function CameraPanel(): JSX.Element {
     handleMouseLeave,
   } = useCameraPanel();
   const { sendMessage } = useWebSocket();
+  const { selfUid } = useGroup();
   const { captureCamera } = useMediaCapture();
-  const { aiState } = useAiState();
   const observationInFlight = useRef(false);
+  const sequence = useRef(0);
 
   useEffect(() => {
     if (!isStreaming) return undefined;
@@ -90,23 +97,27 @@ function CameraPanel(): JSX.Element {
     const abortController = new AbortController();
 
     const observeCamera = async () => {
-      if (aiState !== 'idle') return;
+      if (!selfUid) return;
       if (observationInFlight.current) return;
       observationInFlight.current = true;
 
       try {
         const cameraFrame = await captureCamera(abortController.signal);
         if (cameraFrame) {
-          sendMessage({
-            type: 'ai-speak-signal',
-            images: [
-              {
-                source: 'camera',
-                data: cameraFrame,
-                mime_type: 'image/jpeg',
-              },
-            ],
-          });
+          const message: VisionObservationMessage = {
+            type: 'vision-observation',
+            version: VISION_OBSERVATION_VERSION,
+            client_uid: selfUid,
+            sequence: sequence.current++,
+            captured_at_ms: Date.now(),
+            sampling_interval_ms: VISION_SAMPLING_INTERVAL_MS,
+            frame: {
+              source: 'camera',
+              data: cameraFrame,
+              mime_type: 'image/jpeg',
+            },
+          };
+          sendMessage(message);
         }
       } finally {
         observationInFlight.current = false;
@@ -116,16 +127,18 @@ function CameraPanel(): JSX.Element {
     const stateSubscription = wsService.onStateChange((state) => {
       if (state === 'CLOSING' || state === 'CLOSED') abortController.abort();
     });
-    const intervalId = window.setInterval(() => {
-      void observeCamera();
-    }, 10_000);
+    void observeCamera();
+    const intervalId = window.setInterval(
+      () => void observeCamera(),
+      VISION_SAMPLING_INTERVAL_MS,
+    );
 
     return () => {
       window.clearInterval(intervalId);
       stateSubscription.unsubscribe();
       abortController.abort();
     };
-  }, [aiState, captureCamera, isStreaming, sendMessage]);
+  }, [captureCamera, isStreaming, selfUid, sendMessage]);
 
   useEffect(() => {
     if (videoRef.current) {
