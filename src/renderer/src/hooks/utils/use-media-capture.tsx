@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCamera } from '@/context/camera-context';
 import { useScreenCaptureContext } from '@/context/screen-capture-context';
-import { toaster } from "@/components/ui/toaster";
+import { toaster } from '@/components/ui/toaster';
 import {
   IMAGE_COMPRESSION_QUALITY_KEY,
   DEFAULT_IMAGE_COMPRESSION_QUALITY,
@@ -52,51 +52,54 @@ export function useMediaCapture() {
     return DEFAULT_IMAGE_MAX_WIDTH;
   }, []);
 
-  const captureFrame = useCallback(async (stream: MediaStream | null, source: 'camera' | 'screen') => {
-    if (!stream) {
-      console.warn(`No ${source} stream available`);
-      return null;
-    }
-
-    const videoTrack = stream.getVideoTracks()[0];
-    if (!videoTrack) {
-      console.warn(`No video track in ${source} stream`);
-      return null;
-    }
-
-    const imageCapture = new ImageCapture(videoTrack);
-    try {
-      const bitmap = await imageCapture.grabFrame();
-      const canvas = document.createElement('canvas');
-      let { width, height } = bitmap;
-
-      const maxWidth = getImageMaxWidth();
-      if (maxWidth > 0 && width > maxWidth) {
-        height = (maxWidth / width) * height;
-        width = maxWidth;
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        console.error('Failed to get canvas context');
+  const captureFrame = useCallback(
+    async (stream: MediaStream | null, source: 'camera' | 'screen') => {
+      if (!stream) {
+        console.warn(`No ${source} stream available`);
         return null;
       }
 
-      ctx.drawImage(bitmap, 0, 0, width, height);
-      const quality = getCompressionQuality();
-      return canvas.toDataURL('image/jpeg', quality);
-    } catch (error) {
-      console.error(`Error capturing ${source} frame:`, error);
-      toaster.create({
-        title: `${t('error.failedCapture', { source: source })}: ${error}`,
-        type: 'error',
-        duration: 2000,
-      });
-      return null;
-    }
-  }, [t, getCompressionQuality, getImageMaxWidth]);
+      const videoTrack = stream.getVideoTracks()[0];
+      if (!videoTrack) {
+        console.warn(`No video track in ${source} stream`);
+        return null;
+      }
+
+      const imageCapture = new ImageCapture(videoTrack);
+      try {
+        const bitmap = await imageCapture.grabFrame();
+        const canvas = document.createElement('canvas');
+        let { width, height } = bitmap;
+
+        const maxWidth = getImageMaxWidth();
+        if (maxWidth > 0 && width > maxWidth) {
+          height = (maxWidth / width) * height;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          console.error('Failed to get canvas context');
+          return null;
+        }
+
+        ctx.drawImage(bitmap, 0, 0, width, height);
+        const quality = getCompressionQuality();
+        return canvas.toDataURL('image/jpeg', quality);
+      } catch (error) {
+        console.error(`Error capturing ${source} frame:`, error);
+        toaster.create({
+          title: `${t('error.failedCapture', { source: source })}: ${error}`,
+          type: 'error',
+          duration: 2000,
+        });
+        return null;
+      }
+    },
+    [t, getCompressionQuality, getImageMaxWidth],
+  );
 
   const captureAllMedia = useCallback(async () => {
     const images: ImageData[] = [];
@@ -125,12 +128,18 @@ export function useMediaCapture() {
       }
     }
 
-    console.log("images: ", images);
+    console.log('images: ', images);
 
     return images;
   }, [cameraStream, screenStream, captureFrame]);
 
+  const captureCamera = useCallback(
+    () => captureFrame(cameraStream, 'camera'),
+    [cameraStream, captureFrame],
+  );
+
   return {
+    captureCamera,
     captureAllMedia,
   };
 }

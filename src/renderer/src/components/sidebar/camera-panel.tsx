@@ -1,20 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Box, Text } from '@chakra-ui/react';
 import { FiCamera } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { Tooltip } from '@/components/ui/tooltip';
 import { sidebarStyles } from './sidebar-styles';
 import { useCameraPanel } from '@/hooks/sidebar/use-camera-panel';
-import { useLocalPoseLandmarker } from '@/hooks/vision/use-local-pose-landmarker';
-import { usePoseObservationSubmission } from '@/hooks/vision/use-pose-observation-submission';
-// ============================================================
-// [暫時停用-手勢辨識] 為了單獨測試本機姿態 landmark 擷取與
-// 5 秒姿態觀察送出，暫時註解既有手勢辨識
-// （wave/thumbs_up/smile/mouth_open/hug/heart）與其後端事件送出。
-// 測試完成後還原下面註解即可重新啟用。
-// ============================================================
-// import { useLocalVisionRecognition } from '@/hooks/vision/use-local-vision-recognition';
-// import { useVisionEventSubmission } from '@/hooks/vision/use-vision-event-submission';
+import { useMediaCapture } from '@/hooks/utils/use-media-capture';
+import { useWebSocket } from '@/context/websocket-context';
+import { useAiState } from '@/context/ai-state-context';
 
 // Reusable components
 function LiveIndicator() {
@@ -85,11 +78,44 @@ function CameraPanel(): JSX.Element {
     handleMouseEnter,
     handleMouseLeave,
   } = useCameraPanel();
-  // [暫時停用-手勢辨識] 見上方 import 註解說明，測試完還原即可。
-  // const { isRecognizing, lastEvent } = useLocalVisionRecognition(videoRef, isStreaming);
-  const { isTracking } = useLocalPoseLandmarker(videoRef, isStreaming);
-  // const { visionEventSubmissionStatus } = useVisionEventSubmission();
-  const { poseObservationSubmissionStatus } = usePoseObservationSubmission();
+  const { sendMessage } = useWebSocket();
+  const { captureCamera } = useMediaCapture();
+  const { aiState } = useAiState();
+  const observationInFlight = useRef(false);
+
+  useEffect(() => {
+    if (!isStreaming) return undefined;
+
+    const observeCamera = async () => {
+      if (aiState !== 'idle') return;
+      if (observationInFlight.current) return;
+      observationInFlight.current = true;
+
+      try {
+        const cameraFrame = await captureCamera();
+        if (cameraFrame) {
+          sendMessage({
+            type: 'ai-speak-signal',
+            images: [
+              {
+                source: 'camera',
+                data: cameraFrame,
+                mime_type: 'image/jpeg',
+              },
+            ],
+          });
+        }
+      } finally {
+        observationInFlight.current = false;
+      }
+    };
+
+    const intervalId = window.setInterval(() => {
+      void observeCamera();
+    }, 10_000);
+
+    return () => window.clearInterval(intervalId);
+  }, [aiState, captureCamera, isStreaming, sendMessage]);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -101,43 +127,6 @@ function CameraPanel(): JSX.Element {
     <Box {...sidebarStyles.cameraPanel.container}>
       <Box {...sidebarStyles.cameraPanel.header}>
         {isStreaming && <LiveIndicator />}
-        {/* [暫時停用-手勢辨識] 見上方 import 註解說明，測試完還原即可。 */}
-        {/* {isRecognizing && (
-          <Text fontSize="xs" color="green.300">
-            {t('sidebar.visionReady')}
-          </Text>
-        )} */}
-        {isTracking && (
-          <Text fontSize="xs" color="teal.300">
-            {t('sidebar.poseTracking')}
-          </Text>
-        )}
-        {/* {visionEventSubmissionStatus !== 'idle' && (
-          <Text
-            fontSize="xs"
-            color={
-              visionEventSubmissionStatus === 'failed'
-                ? 'red.300'
-                : 'yellow.300'
-            }
-          >
-            {t(`sidebar.visionSubmission.${visionEventSubmissionStatus}`)}
-          </Text>
-        )} */}
-        {poseObservationSubmissionStatus !== 'idle' && (
-          <Text
-            fontSize="xs"
-            color={
-              poseObservationSubmissionStatus === 'failed'
-                ? 'red.300'
-                : 'yellow.300'
-            }
-          >
-            {t(
-              `sidebar.poseObservationSubmission.${poseObservationSubmissionStatus}`,
-            )}
-          </Text>
-        )}
       </Box>
 
       <Tooltip
@@ -165,22 +154,6 @@ function CameraPanel(): JSX.Element {
           ) : (
             <>
               <VideoStream videoRef={videoRef} isStreaming={isStreaming} />
-              {/* [暫時停用-手勢辨識] 見上方 import 註解說明，測試完還原即可。 */}
-              {/* {lastEvent && (
-                <Text
-                  position="absolute"
-                  bottom={2}
-                  left={2}
-                  px={2}
-                  py={1}
-                  borderRadius="sm"
-                  bg="blackAlpha.700"
-                  color="white"
-                  fontSize="xs"
-                >
-                  {t(`sidebar.visionEvents.${lastEvent}`)}
-                </Text>
-              )} */}
               {!isStreaming && <CameraPlaceholder />}
             </>
           )}
