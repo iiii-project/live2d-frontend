@@ -40,6 +40,8 @@
       "imageMaxWidthHelp": "圖片縮放的最大寬度。超過此寬度的圖片會依比例縮小。設為 0 表示不限制大小。部分 AI 模型處理過大圖片時可能有限制；但多數模型可自動處理，因此預設為 0，以保留原始圖片。"
     },
     "live2d": {
+      "model": "Live2D 模型",
+      "modelPlaceholder": "選擇模型",
       "pointerInteractive": "滑鼠互動",
       "scrollToResize": "啟用捲動縮放"
     },
