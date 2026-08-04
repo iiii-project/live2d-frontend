@@ -11,6 +11,10 @@ import {
   IMAGE_MAX_WIDTH_KEY,
   DEFAULT_IMAGE_MAX_WIDTH,
 } from '@/hooks/sidebar/setting/use-general-settings';
+import {
+  analyzeVisionFrame,
+  createVisionFrameLease,
+} from '@/hooks/vision/vision-frame-memory-contract';
 
 // Add type definition for ImageCapture
 declare class ImageCapture {
@@ -53,7 +57,11 @@ export function useMediaCapture() {
   }, []);
 
   const captureFrame = useCallback(
-    async (stream: MediaStream | null, source: 'camera' | 'screen') => {
+    async (
+      stream: MediaStream | null,
+      source: 'camera' | 'screen',
+      signal?: AbortSignal,
+    ) => {
       if (!stream) {
         console.warn(`No ${source} stream available`);
         return null;
@@ -68,27 +76,37 @@ export function useMediaCapture() {
       const imageCapture = new ImageCapture(videoTrack);
       try {
         const bitmap = await imageCapture.grabFrame();
-        const canvas = document.createElement('canvas');
-        let { width, height } = bitmap;
+        const lease = createVisionFrameLease(bitmap);
+        return await analyzeVisionFrame(
+          lease,
+          async (frame, analyzerSignal) => {
+            if (analyzerSignal.aborted) return null;
+            const canvas = document.createElement('canvas');
+            let { width, height } = frame.bitmap;
 
-        const maxWidth = getImageMaxWidth();
-        if (maxWidth > 0 && width > maxWidth) {
-          height = (maxWidth / width) * height;
-          width = maxWidth;
-        }
+            const maxWidth = getImageMaxWidth();
+            if (maxWidth > 0 && width > maxWidth) {
+              height = (maxWidth / width) * height;
+              width = maxWidth;
+            }
 
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          console.error('Failed to get canvas context');
-          return null;
-        }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              console.error('Failed to get canvas context');
+              return null;
+            }
 
-        ctx.drawImage(bitmap, 0, 0, width, height);
-        const quality = getCompressionQuality();
-        return canvas.toDataURL('image/jpeg', quality);
+            ctx.drawImage(frame.bitmap, 0, 0, width, height);
+            if (analyzerSignal.aborted) return null;
+            const quality = getCompressionQuality();
+            return canvas.toDataURL('image/jpeg', quality);
+          },
+          signal ?? new AbortController().signal,
+        );
       } catch (error) {
+        if (signal?.aborted) return null;
         console.error(`Error capturing ${source} frame:`, error);
         toaster.create({
           title: `${t('error.failedCapture', { source: source })}: ${error}`,
@@ -128,13 +146,11 @@ export function useMediaCapture() {
       }
     }
 
-    console.log('images: ', images);
-
     return images;
   }, [cameraStream, screenStream, captureFrame]);
 
   const captureCamera = useCallback(
-    () => captureFrame(cameraStream, 'camera'),
+    (signal?: AbortSignal) => captureFrame(cameraStream, 'camera', signal),
     [cameraStream, captureFrame],
   );
 

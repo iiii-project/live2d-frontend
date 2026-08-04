@@ -8,6 +8,7 @@ import { useCameraPanel } from '@/hooks/sidebar/use-camera-panel';
 import { useMediaCapture } from '@/hooks/utils/use-media-capture';
 import { useWebSocket } from '@/context/websocket-context';
 import { useAiState } from '@/context/ai-state-context';
+import { wsService } from '@/services/websocket-service';
 
 // Reusable components
 function LiveIndicator() {
@@ -86,13 +87,15 @@ function CameraPanel(): JSX.Element {
   useEffect(() => {
     if (!isStreaming) return undefined;
 
+    const abortController = new AbortController();
+
     const observeCamera = async () => {
       if (aiState !== 'idle') return;
       if (observationInFlight.current) return;
       observationInFlight.current = true;
 
       try {
-        const cameraFrame = await captureCamera();
+        const cameraFrame = await captureCamera(abortController.signal);
         if (cameraFrame) {
           sendMessage({
             type: 'ai-speak-signal',
@@ -110,11 +113,18 @@ function CameraPanel(): JSX.Element {
       }
     };
 
+    const stateSubscription = wsService.onStateChange((state) => {
+      if (state === 'CLOSING' || state === 'CLOSED') abortController.abort();
+    });
     const intervalId = window.setInterval(() => {
       void observeCamera();
     }, 10_000);
 
-    return () => window.clearInterval(intervalId);
+    return () => {
+      window.clearInterval(intervalId);
+      stateSubscription.unsubscribe();
+      abortController.abort();
+    };
   }, [aiState, captureCamera, isStreaming, sendMessage]);
 
   useEffect(() => {
