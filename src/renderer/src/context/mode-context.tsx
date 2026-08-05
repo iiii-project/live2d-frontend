@@ -1,6 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { toaster } from '../components/ui/toaster';
-import i18n from '../i18n';
 
 export type ModeType = 'window' | 'pet';
 
@@ -13,20 +11,12 @@ interface ModeContextType {
 const ModeContext = createContext<ModeContextType | undefined>(undefined);
 
 export const ModeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [mode, setModeState] = useState<ModeType>('window');
   const isElectron = window.api !== undefined;
+  // Web (non-Electron) builds default straight to pet mode: character-only,
+  // no sidebar/footer/title bar, so it can be embedded as a floating overlay.
+  const [mode, setModeState] = useState<ModeType>(isElectron ? 'window' : 'pet');
 
   const setMode = (newMode: ModeType) => {
-    if (newMode === 'pet' && !isElectron) {
-      toaster.create({
-        title: i18n.t('mode.petModeUnavailable'),
-        description: i18n.t('mode.petModeDesktopOnly'),
-        type: "info",
-        duration: 2000,
-      });
-      return;
-    }
-
     // Electron-specific mode change
     if (isElectron && window.api) {
       (window.api as any).setMode(newMode);

@@ -75,17 +75,20 @@ const createConfig = async (outDir: string) => ({
     allowedHosts: ['vtjimmy.dev-serve.me'],
     port: 3000,
     proxy: {
+      // live2d-backend's engine now runs inside iiii-project-backend (Django + Channels),
+      // same process/port as the rest of the fortune API. See apps/live2d.
       '/client-ws': {
-        target: 'ws://127.0.0.1:12393',
+        target: 'ws://127.0.0.1:8003',
         ws: true,
       },
-      '/avatars': 'http://127.0.0.1:12393',
-      '/bg': 'http://127.0.0.1:12393',
-      '/cache': 'http://127.0.0.1:12393',
-      '/live2d-models': 'http://127.0.0.1:12393',
-      '/api/v1/vision-events': 'http://127.0.0.1:12393',
-      '/api/v1/pose-observations': 'http://127.0.0.1:12393',
-      '/api/v1/motion-to-text': 'http://127.0.0.1:12393',
+      '/avatars': 'http://127.0.0.1:8003',
+      '/bg': 'http://127.0.0.1:8003',
+      '/cache': 'http://127.0.0.1:8003',
+      '/live2d-models': 'http://127.0.0.1:8003',
+      // Vision/pose features were not ported (unused by this integration's pet-mode UI).
+      '/api/v1/vision-events': 'http://127.0.0.1:8003',
+      '/api/v1/pose-observations': 'http://127.0.0.1:8003',
+      '/api/v1/motion-to-text': 'http://127.0.0.1:8003',
     },
   },
   build: {
