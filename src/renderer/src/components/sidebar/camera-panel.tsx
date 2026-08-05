@@ -23,13 +23,22 @@ const HAND_CONNECTIONS: Array<[number, number]> = [
   [5, 9], [9, 13], [13, 17],
 ];
 
-// MediaPipe Pose landmark indices for the arms only (shoulder-elbow-wrist),
-// used only to draw the debug skeleton.
-const ARM_CONNECTIONS: Array<[number, number]> = [
+// MediaPipe Pose (33-point) landmark topology for the body — torso, arms,
+// legs and feet — used only to draw the debug skeleton. Indices 0-10 (the
+// pose model's own crude face points) and 17-22 (crude hand points) are
+// skipped since the much denser FaceLandmarker/hand skeletons already cover
+// those areas elsewhere in this overlay.
+const BODY_CONNECTIONS: Array<[number, number]> = [
   [11, 12], // shoulder to shoulder
   [11, 13], [13, 15], // left arm: shoulder-elbow-wrist
   [12, 14], [14, 16], // right arm: shoulder-elbow-wrist
+  [11, 23], [12, 24], [23, 24], // torso: shoulders to hips, hip to hip
+  [23, 25], [25, 27], // left leg: hip-knee-ankle
+  [24, 26], [26, 28], // right leg: hip-knee-ankle
+  [27, 29], [29, 31], [27, 31], // left foot: ankle-heel-foot index
+  [28, 30], [30, 32], [28, 32], // right foot: ankle-heel-foot index
 ];
+const BODY_POINT_INDICES = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32];
 
 // Reusable components
 function LiveIndicator() {
@@ -121,7 +130,7 @@ function VideoStream({
   );
 }
 
-// Draws the live hand/face/arm detection points on top of the video so the
+// Draws the live hand/face/body detection points on top of the video so the
 // user can confirm what MediaPipe is actually picking up, without re-running
 // detection itself (it just reads the refs the recognition hooks already fill).
 function LandmarkOverlay({
@@ -216,7 +225,7 @@ function LandmarkOverlay({
             ctx.lineWidth = 2;
             ctx.strokeStyle = 'rgba(76, 217, 100, 0.85)';
             ctx.fillStyle = '#4cd964';
-            for (const [a, b] of ARM_CONNECTIONS) {
+            for (const [a, b] of BODY_CONNECTIONS) {
               const from = body[a];
               const to = body[b];
               if (!from || !to) continue;
@@ -227,7 +236,7 @@ function LandmarkOverlay({
               ctx.lineTo(p2.x, p2.y);
               ctx.stroke();
             }
-            for (const index of [11, 12, 13, 14, 15, 16]) {
+            for (const index of BODY_POINT_INDICES) {
               const point = body[index];
               if (!point) continue;
               const p = toPixel(point);
