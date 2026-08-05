@@ -85,6 +85,8 @@
     "screen": "Screen",
     "browser": "Browser",
     "live": "Live",
+    "interactionModeOn": "Turn on: use the camera as the background so the VTuber renders in front of you for body interaction",
+    "interactionModeOff": "Turn off: go back to a static background",
     "visionReady": "Local recognition active",
     "poseTracking": "Local pose tracking active",
     "visionEvents": {
@@ -147,7 +149,6 @@
     "cameraApiNotSupported": "Camera API is not supported on this device",
     "noCameraFound": "No camera found on this device",
     "failedStartCamera": "Failed to start camera",
-    "failedStartBackgroundCamera": "Failed to start background camera",
     "failedStartScreenCapture": "Failed to start screen capture",
     "failedStartVAD": "Failed to start VAD",
     "llmCantHear": "The LLM can't hear you.",

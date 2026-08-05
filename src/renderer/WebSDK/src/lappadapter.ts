@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { LAppLive2DManager } from "./lapplive2dmanager";
 import { LAppModel } from "./lappmodel";
+import { LAppDelegate } from "./lappdelegate";
 import * as LAppDefine from './lappdefine';
 import { LAppPal } from "./lapppal";
 
@@ -75,6 +76,45 @@ export class LAppAdapter {
 
   public setExpression(name: string): void {
     this.getModel()?.setExpression(name);
+  }
+
+  /* hit testing (mirrors the coordinate pipeline used by mouse tap handling
+     in use-live2d-model.ts, factored out here so any input source — mouse,
+     hand tracking — can drive it with plain viewport clientX/clientY) */
+
+  public getCanvasRect(): DOMRect | null {
+    const canvas = document.getElementById('canvas') as HTMLCanvasElement | null;
+    return canvas ? canvas.getBoundingClientRect() : null;
+  }
+
+  // Converts viewport clientX/clientY into Cubism "screen"/model coordinates
+  // — the same conversion used for both mouse hit-testing and mouse-drag
+  // repositioning in use-live2d-model.ts.
+  public screenToModel(clientX: number, clientY: number): { x: number, y: number } | null {
+    const canvas = document.getElementById('canvas') as HTMLCanvasElement | null;
+    const view = LAppDelegate.getInstance().getView();
+    if (!canvas || !view) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const scale = canvas.width / canvas.clientWidth;
+    return {
+      x: view._deviceToScreen.transformX(x * scale),
+      y: view._deviceToScreen.transformY(y * scale),
+    };
+  }
+
+  public hitTest(clientX: number, clientY: number): string | null {
+    const model = this.getModel();
+    const modelPos = this.screenToModel(clientX, clientY);
+    if (!model || !modelPos) return null;
+
+    return model.anyhitTest(modelPos.x, modelPos.y);
+  }
+
+  public startTapMotion(hitAreaName: string, tapMotionsConfig: Record<string, Record<string, number>>): void {
+    this.getModel()?.startTapMotion(hitAreaName, tapMotionsConfig);
   }
 
   // @deprecated

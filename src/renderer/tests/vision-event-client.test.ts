@@ -15,6 +15,7 @@ describe('submitVisionEvent', () => {
   it.each([
     'wave', 'thumbs_up', 'thumbs_down', 'victory', 'love_you', 'pointing_up', 'fist', 'hug', 'heart',
     'smile', 'mouth_open', 'surprised', 'sad', 'angry', 'wink', 'kiss', 'tongue_out', 'eyebrow_raise',
+    'touch_head', 'touch_body', 'touch_character', 'move_character', 'resize_character',
   ] as const)('sends %s using only the versioned API contract fields', async (event) => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 202 }));
     vi.stubGlobal('fetch', fetchMock);

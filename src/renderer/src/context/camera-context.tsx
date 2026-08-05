@@ -31,18 +31,19 @@ interface CameraContextState {
   cameraConfig: CameraConfig;
   setCameraConfig: (config: CameraConfig) => void;
   videoRef: React.RefObject<HTMLVideoElement>;
-  backgroundStream: MediaStream | null;
-  startBackgroundCamera: () => Promise<void>;
-  stopBackgroundCamera: () => void;
-  isBackgroundStreaming: boolean;
 }
 
 /**
  * Default values and constants
  */
+// 320x240 was too low-res for reliable face-landmark detection on some
+// webcam drivers (particularly on Windows) — hand tracking survived on
+// coarse finger shapes, but the 468 dense face points would drift onto
+// background noise. 640x480 is still light enough for MediaPipe's WASM
+// inference while giving the face model enough detail to lock on.
 const DEFAULT_CAMERA_CONFIG: CameraConfig = {
-  width: 320,
-  height: 240,
+  width: 640,
+  height: 480,
 };
 
 /**
@@ -59,12 +60,10 @@ export function CameraProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   // State management
   const [isStreaming, setIsStreaming] = useState(false);
-  const [isBackgroundStreaming, setIsBackgroundStreaming] = useState(false);
   const [cameraConfig, setCameraConfig] = useState<CameraConfig>(
     DEFAULT_CAMERA_CONFIG,
   );
   const streamRef = useRef<MediaStream | null>(null);
-  const backgroundStreamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Start camera stream
@@ -113,46 +112,6 @@ export function CameraProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const startBackgroundCamera = useCallback(async () => {
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error(t('error.cameraApiNotSupported'));
-      }
-
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const hasCamera = devices.some((device) => device.kind === 'videoinput');
-      if (!hasCamera) {
-        throw new Error(t('error.noCameraFound'));
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: cameraConfig.width },
-          height: { ideal: cameraConfig.height },
-        },
-      });
-
-      backgroundStreamRef.current = stream;
-      setIsBackgroundStreaming(true);
-    } catch (err) {
-      console.error('Failed to start background camera:', err);
-      toaster.create({
-        title: `${t('error.failedStartBackgroundCamera')}: ${err}`,
-        type: 'error',
-        duration: 2000,
-      });
-      throw err;
-    }
-  }, [cameraConfig, t]);
-
-  const stopBackgroundCamera = useCallback(() => {
-    if (backgroundStreamRef.current) {
-      backgroundStreamRef.current.getTracks().forEach((track) => track.stop());
-      backgroundStreamRef.current = null;
-      setIsBackgroundStreaming(false);
-    }
-  }, []);
-
   // Memoized context value
   const contextValue = useMemo(
     () => ({
@@ -163,12 +122,8 @@ export function CameraProvider({ children }: { children: ReactNode }) {
       cameraConfig,
       setCameraConfig,
       videoRef,
-      backgroundStream: backgroundStreamRef.current,
-      startBackgroundCamera,
-      stopBackgroundCamera,
-      isBackgroundStreaming,
     }),
-    [isStreaming, startCamera, stopCamera, cameraConfig, isBackgroundStreaming, startBackgroundCamera, stopBackgroundCamera],
+    [isStreaming, startCamera, stopCamera, cameraConfig],
   );
 
   return (

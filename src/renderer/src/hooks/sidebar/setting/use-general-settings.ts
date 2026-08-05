@@ -46,7 +46,7 @@ export const useGeneralSettings = ({
 }: UseGeneralSettingsProps) => {
   const { showSubtitle, setShowSubtitle } = useSubtitle();
   const { setUseCameraBackground } = bgUrlContext || {};
-  const { startBackgroundCamera, stopBackgroundCamera } = useCamera();
+  const { startCamera, stopCamera } = useCamera();
   const { configFiles, getFilenameByName } = useConfig();
   const { switchCharacter } = useSwitchCharacter();
 
@@ -172,9 +172,9 @@ export const useGeneralSettings = ({
 
     // Handle camera state
     if (originalSettings.useCameraBackground) {
-      startBackgroundCamera();
+      startCamera();
     } else {
-      stopBackgroundCamera();
+      stopCamera();
     }
   };
 
@@ -199,7 +199,7 @@ export const useGeneralSettings = ({
 
     if (checked) {
       try {
-        await startBackgroundCamera();
+        await startCamera();
         handleSettingChange('useCameraBackground', true);
         setUseCameraBackground(true);
       } catch (error) {
@@ -208,7 +208,7 @@ export const useGeneralSettings = ({
         setUseCameraBackground(false);
       }
     } else {
-      stopBackgroundCamera();
+      stopCamera();
       handleSettingChange('useCameraBackground', false);
       setUseCameraBackground(false);
     }

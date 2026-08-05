@@ -1,15 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { Box, Text } from '@chakra-ui/react';
-import { FiCamera } from 'react-icons/fi';
+import { FiCamera, FiZap } from 'react-icons/fi';
 import { useTranslation } from 'react-i18next';
 import { Tooltip } from '@/components/ui/tooltip';
 import { sidebarStyles } from './sidebar-styles';
 import { useCameraPanel } from '@/hooks/sidebar/use-camera-panel';
+import { useBgUrl } from '@/context/bgurl-context';
 import { useLocalVisionRecognition } from '@/hooks/vision/use-local-vision-recognition';
 import type { DetectedLandmarks } from '@/hooks/vision/use-local-vision-recognition';
 import { useVisionEventSubmission } from '@/hooks/vision/use-vision-event-submission';
 import { useLocalPoseLandmarker } from '@/hooks/vision/use-local-pose-landmarker';
 import { usePoseObservationSubmission } from '@/hooks/vision/use-pose-observation-submission';
+import { useHandLive2DInteraction } from '@/hooks/vision/use-hand-live2d-interaction';
 
 // 21-point MediaPipe hand landmark topology, used only to draw the debug skeleton.
 const HAND_CONNECTIONS: Array<[number, number]> = [
@@ -44,6 +46,40 @@ function LiveIndicator() {
       />
       <Text fontSize="sm">{t('sidebar.live')}</Text>
     </Box>
+  );
+}
+
+// Toggles the camera feed as the Live2D background so the VTuber renders in
+// front of the user's own video, for body-driven interaction. Reuses the same
+// camera session as gesture/pose detection (see camera-context.tsx), so
+// turning this on also starts detection without opening a second stream.
+function InteractionModeButton() {
+  const { t } = useTranslation();
+  const { useCameraBackground, setUseCameraBackground } = useBgUrl();
+
+  return (
+    <Tooltip
+      showArrow
+      content={
+        useCameraBackground
+          ? t('sidebar.interactionModeOff')
+          : t('sidebar.interactionModeOn')
+      }
+    >
+      <Box
+        onClick={(event: React.MouseEvent) => {
+          event.stopPropagation();
+          setUseCameraBackground(!useCameraBackground);
+        }}
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        color={useCameraBackground ? 'yellow.300' : 'whiteAlpha.700'}
+        cursor="pointer"
+      >
+        <FiZap size={16} />
+      </Box>
+    </Tooltip>
   );
 }
 
@@ -242,10 +278,12 @@ function CameraPanel(): JSX.Element {
     handleMouseEnter,
     handleMouseLeave,
   } = useCameraPanel();
-  const { landmarksRef } = useLocalVisionRecognition(videoRef, isStreaming);
+  const { landmarksRef, gestureNamesRef } = useLocalVisionRecognition(videoRef, isStreaming);
   useVisionEventSubmission();
   const { bodyLandmarksRef } = useLocalPoseLandmarker(videoRef, isStreaming);
   usePoseObservationSubmission();
+  const { useCameraBackground } = useBgUrl();
+  useHandLive2DInteraction(videoRef, landmarksRef, gestureNamesRef, isStreaming && useCameraBackground);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -256,7 +294,8 @@ function CameraPanel(): JSX.Element {
   return (
     <Box {...sidebarStyles.cameraPanel.container}>
       <Box {...sidebarStyles.cameraPanel.header}>
-        {isStreaming && <LiveIndicator />}
+        {isStreaming ? <LiveIndicator /> : <Box />}
+        <InteractionModeButton />
       </Box>
 
       <Tooltip

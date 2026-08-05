@@ -7,23 +7,24 @@ import { useBgUrl } from '@/context/bgurl-context';
 const Background = memo(({ children }: { children?: React.ReactNode }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const {
-    backgroundStream, isBackgroundStreaming, startBackgroundCamera, stopBackgroundCamera,
+    stream, isStreaming, startCamera, stopCamera,
   } = useCamera();
   const { useCameraBackground, backgroundUrl } = useBgUrl();
 
   useEffect(() => {
     if (useCameraBackground) {
-      startBackgroundCamera();
+      // startCamera() already surfaces a toast on failure (camera-context.tsx).
+      startCamera().catch(() => {});
     } else {
-      stopBackgroundCamera();
+      stopCamera();
     }
-  }, [useCameraBackground, startBackgroundCamera, stopBackgroundCamera]);
+  }, [useCameraBackground, startCamera, stopCamera]);
 
   useEffect(() => {
-    if (videoRef.current && backgroundStream) {
-      videoRef.current.srcObject = backgroundStream;
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
     }
-  }, [backgroundStream]);
+  }, [stream]);
 
   return (
     <Box {...canvasStyles.background.container}>
@@ -35,7 +36,7 @@ const Background = memo(({ children }: { children?: React.ReactNode }) => {
           muted
           style={{
             ...canvasStyles.background.video,
-            display: isBackgroundStreaming ? 'block' : 'none',
+            display: isStreaming ? 'block' : 'none',
             transform: 'scaleX(-1)',
           }}
         />

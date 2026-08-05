@@ -85,6 +85,8 @@
     "screen": "螢幕",
     "browser": "瀏覽器",
     "live": "直播",
+    "interactionModeOn": "開啟：把攝影機畫面當背景，VTuber顯示在前面，可以用肢體跟她互動",
+    "interactionModeOff": "關閉：恢復成靜態背景",
     "visionReady": "本機辨識已啟動",
     "poseTracking": "本機姿態追蹤中",
     "visionEvents": {
@@ -147,7 +149,6 @@
     "cameraApiNotSupported": "此裝置不支援攝影機 API",
     "noCameraFound": "此裝置找不到攝影機",
     "failedStartCamera": "無法啟動攝影機",
-    "failedStartBackgroundCamera": "無法啟動背景攝影機",
     "failedStartScreenCapture": "無法啟動螢幕擷取",
     "failedStartVAD": "無法啟動語音活動偵測",
     "llmCantHear": "AI 聽不到你的聲音。",

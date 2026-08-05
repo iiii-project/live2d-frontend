@@ -26,7 +26,12 @@ export type LocalVisionEvent =
   | 'wink'
   | 'kiss'
   | 'tongue_out'
-  | 'eyebrow_raise';
+  | 'eyebrow_raise'
+  | 'touch_head'
+  | 'touch_body'
+  | 'touch_character'
+  | 'move_character'
+  | 'resize_character';
 
 export interface DetectedLandmarks {
   hands: Array<Array<{ x: number; y: number }>>;
@@ -153,6 +158,11 @@ export function useLocalVisionRecognition(videoRef: React.RefObject<HTMLVideoEle
   // Updated every detection frame (not gated by the event cooldown) so a
   // debug overlay can draw the live points without forcing a React render.
   const landmarksRef = useRef<DetectedLandmarks>({ hands: [], face: null });
+  // MediaPipe's raw per-hand gesture classification (e.g. "Closed_Fist",
+  // "Open_Palm"), parallel to landmarksRef.current.hands, exposed so other
+  // consumers (e.g. hand-driven Live2D control) don't need to re-run
+  // classification themselves.
+  const gestureNamesRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (!isStreaming) {
@@ -192,6 +202,7 @@ export function useLocalVisionRecognition(videoRef: React.RefObject<HTMLVideoEle
       };
       const gestures = gestureResult?.gestures ?? [];
       const gestureNames = gestures.map((categories) => categories[0]?.categoryName ?? '');
+      gestureNamesRef.current = gestureNames;
       const gestureName = gestureNames[0];
       const gestureConfidence = gestures[0]?.[0]?.score ?? 0;
       const builtinEvent = gestureName ? BUILTIN_GESTURE_EVENTS[gestureName] : undefined;
@@ -261,9 +272,10 @@ export function useLocalVisionRecognition(videoRef: React.RefObject<HTMLVideoEle
       previousWristRef.current = null;
       lastEventAtByTypeRef.current = {};
       landmarksRef.current = { hands: [], face: null };
+      gestureNamesRef.current = [];
       setIsRecognizing(false);
     };
   }, [isStreaming, videoRef]);
 
-  return { isRecognizing, lastEvent, landmarksRef };
+  return { isRecognizing, lastEvent, landmarksRef, gestureNamesRef };
 }
